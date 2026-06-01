@@ -20,16 +20,6 @@ export const UserLoginSchema = z.object({
   ip: z.string(),
 });
 
-export const UserUpdateSchema = z.object({
-  name: z.string().min(3).max(20),
-  email: z.string(),
-  mobile: z
-    .string()
-    .min(10)
-    .max(10)
-    .regex(/^[0-9]{10}$/),
-});
-
 export const UserDeleteSchema = z.object({
   email: z.string(),
 });

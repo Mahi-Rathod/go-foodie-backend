@@ -5,7 +5,7 @@ import { otpService } from "../../services/otp.service.js";
 import { smsService } from "../../services/sms.service.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
 import { AppError } from "../../utils/app.error.js";
-import { getUserById } from "../user/user.services.js";
+import { getUserByIdService } from "../user/user.services.js";
 import {
   loginUserByOtpService,
   loginUserByPasswordService,
@@ -363,7 +363,7 @@ export const getProfile = async (req: Request, res: Response) => {
         error: "User not found",
       });
     }
-    const user = await getUserById(id);
+    const user = await getUserByIdService(id);
     if (!user) {
       return apiResponseUtils.error({
         res,
