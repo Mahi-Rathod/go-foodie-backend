@@ -28,6 +28,18 @@ enum OTP_PURPOSE {
   DELETE_ACCOUNT
 }
 
+enum RESTAURANT_STATUS {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DOCUMENT_STATUS {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id          String    @id @default(uuid())
   username    String    @unique
@@ -39,7 +51,7 @@ model User {
   isVerified  Boolean   @default(false)
 
   addresses   Address[]
-  restaurant  Restaurant? 
+  restaurants  Restaurant[]
 
   OtpCodes    OtpCodes[]
 
@@ -73,7 +85,7 @@ model Address {
 
   label       ADRESS_LABLE
 
-  fullAdress  String
+  fullAddress  String
   landmark    String?
 
   city        String
@@ -91,24 +103,30 @@ model Address {
 }
 
 model Restaurant {
-  id        String   @id @default(uuid())
-  name      String
+  id            String   @id @default(uuid())
+  name          String
 
-  ownerId   String   @unique
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId       String   
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  address   String
-  city      String
-  pinCode   String
+  fullAddress    String
+  city          String
+  pinCode       String
 
-  latitude  Float 
-  longitude Float
+  latitude      Float?
+  longitude     Float?
 
-  isOpen    Boolean  @default(true)
+  isOpen        Boolean  @default(true)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  status        RESTAURANT_STATUS @default(PENDING)
+
+  documents     Document[]
+  bankDetails  BankDetails?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
+
 
 
 model OtpCodes {
@@ -126,4 +144,33 @@ model OtpCodes {
   user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([identifier, purpose])
+}
+
+model Document {
+  id     String @id @default(uuid())
+  name   String
+  url    String
+  status DOCUMENT_STATUS @default(PENDING)
+  note   String?
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BankDetails{
+  id              String @id @default(uuid())
+  accountHolderName  String
+  accountNumber  String
+  ifsc            String
+  bankName       String
+  branch          String
+
+  restaurantId    String @unique
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

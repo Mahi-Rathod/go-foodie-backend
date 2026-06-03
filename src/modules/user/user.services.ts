@@ -15,7 +15,7 @@ export const getUserByIdService = async (
       },
       include: {
         addresses: true,
-        restaurant: true,
+        restaurants: true,
       },
     });
     return user;
@@ -104,7 +104,7 @@ export const deleteUserProfileService = async ({
 export const addUserAddressService = async ({
   userId,
   label,
-  fullAdress,
+  fullAddress,
   landmark,
   city,
   state,
@@ -117,7 +117,7 @@ export const addUserAddressService = async ({
     const address = await prisma.address.create({
       data: {
         label,
-        fullAdress,
+        fullAddress,
         landmark: landmark ?? null,
         city,
         state,

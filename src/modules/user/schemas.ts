@@ -14,7 +14,7 @@ export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;
 
 export const AddressInputSchema = z.object({
   label: z.enum(ADRESS_LABLE),
-  fullAdress: z.string().min(3).max(100),
+  fullAddress: z.string().min(3).max(100),
   landmark: z.string().min(3).max(100).optional(),
   city: z.string().min(3).max(100),
   state: z.string().min(3).max(100),
