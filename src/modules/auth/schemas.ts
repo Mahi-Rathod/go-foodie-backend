@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ROLE } from "../../generated/prisma/enums.js";
 
 export const UserRegisterSchema = z.object({
   username: z.string().min(3).max(20),
@@ -6,6 +7,7 @@ export const UserRegisterSchema = z.object({
   email: z.string(),
   mobile: z.string().regex(/^(\+91)?[6-9]\d{9}$/, "Invalid mobile number"),
   password: z.string().min(8).max(20),
+  role: z.enum(ROLE).optional(),
 });
 
 export const UserLoginSchema = z.object({

@@ -1,10 +1,19 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import {
+  DOCUMENT_STATUS,
+  RESTAURANT_STATUS,
+} from "../../generated/prisma/client.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
 import { AppError } from "../../utils/app.error.js";
 import {
   applyForRestaurantService,
+  documentUploadService,
+  getRestaurantByIdService,
+  getRestaurantDocumentsService,
   submitRestaurantBankDetailsService,
+  updateRestaurantDocumentStatusService,
+  updateRestaurantStatusService,
 } from "./restaurant.services.js";
 import { ApplyForRestaurantSchema, BankDetailsSchema } from "./schemas.js";
 
@@ -98,17 +107,166 @@ export const uploadRestaurantDocuments = async (
   req: Request,
   res: Response,
 ) => {
-  const { id } = req.user;
-  const { restaurantId } = req.params;
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+    const file = req.file;
+    const { documentType } = req.body;
 
-  const documents = req.files as any;
-  const documentNames = Object.keys(documents);
-  console.log(documentNames);
+    if (!file || !documentType) {
+      throw new AppError("File and document type are required", 400);
+    }
 
-  return apiResponseUtils.success({
-    res,
-    message: "Restaurant documents uploaded successfully",
-    data: documents,
-    statusCode: 200,
-  });
+    const uploadedDocument = await documentUploadService({
+      restaurantId: restaurantId,
+      file,
+      documentType,
+    });
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant documents uploaded successfully",
+      data: uploadedDocument,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to upload restaurant documents",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const getRestaurantDocuments = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+
+    const documents = await getRestaurantDocumentsService({ restaurantId });
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant documents retrieved successfully",
+      data: documents,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to retrieve restaurant documents",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const getRestaurantsById = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+    const restaurant = await getRestaurantByIdService(restaurantId);
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant details retrieved successfully",
+      data: restaurant,
+      statusCode: 200,
+    });
+  } catch (error) {
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to retrieve restaurant details",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const updateRestaurantStatus = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+    const { status, note } = req.body as {
+      status: RESTAURANT_STATUS;
+      note?: string;
+    };
+
+    const restaurant = await updateRestaurantStatusService({
+      restaurantId: restaurantId,
+      status: status,
+    });
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant status updated successfully",
+      data: restaurant,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to update restaurant status",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const updateRestaurantDocumentStatus = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { documentId } = req.params as { documentId: string };
+    const { status, note } = req.body as {
+      status: DOCUMENT_STATUS;
+      note?: string;
+    };
+
+    if (!status) {
+      throw new AppError("Status is required", 400);
+    }
+
+    const document = await updateRestaurantDocumentStatusService({
+      documentId,
+      status,
+      note: note ?? "",
+    });
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant document status updated successfully",
+      data: document,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to update restaurant document status",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
 };

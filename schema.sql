@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict zAkBI8WMAK5KmlKNQvMlOriUh9jyrICffJysNC9zhVqeV5LJi0yvanbEeL17OP5
+\restrict PtWL8nKkF08l6dcoAiO2wVW8iWDhpqc5JPWjjpJDMz6XJvYrX7Zwz9lE5Ggj12X
 
--- Dumped from database version 15.17 (Debian 15.17-1.pgdg13+1)
--- Dumped by pg_dump version 15.17 (Debian 15.17-1.pgdg13+1)
+-- Dumped from database version 15.18 (Debian 15.18-1.pgdg13+1)
+-- Dumped by pg_dump version 15.18 (Debian 15.18-1.pgdg13+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -17,22 +17,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- Name: public; Type: SCHEMA; Schema: -; Owner: postgres
---
-
--- *not* creating schema, since initdb creates it
-
-
-ALTER SCHEMA public OWNER TO postgres;
-
---
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: postgres
---
-
-COMMENT ON SCHEMA public IS '';
-
 
 --
 -- Name: ADRESS_LABLE; Type: TYPE; Schema: public; Owner: postgres
@@ -48,6 +32,19 @@ CREATE TYPE public."ADRESS_LABLE" AS ENUM (
 ALTER TYPE public."ADRESS_LABLE" OWNER TO postgres;
 
 --
+-- Name: DOCUMENT_STATUS; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public."DOCUMENT_STATUS" AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REJECTED'
+);
+
+
+ALTER TYPE public."DOCUMENT_STATUS" OWNER TO postgres;
+
+--
 -- Name: OTP_PURPOSE; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -60,6 +57,19 @@ CREATE TYPE public."OTP_PURPOSE" AS ENUM (
 
 
 ALTER TYPE public."OTP_PURPOSE" OWNER TO postgres;
+
+--
+-- Name: RESTAURANT_STATUS; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public."RESTAURANT_STATUS" AS ENUM (
+    'PENDING',
+    'APPROVED',
+    'REJECTED'
+);
+
+
+ALTER TYPE public."RESTAURANT_STATUS" OWNER TO postgres;
 
 --
 -- Name: ROLE; Type: TYPE; Schema: public; Owner: postgres
@@ -87,7 +97,7 @@ CREATE TABLE public."Address" (
     id text NOT NULL,
     "userId" text NOT NULL,
     label public."ADRESS_LABLE" NOT NULL,
-    "fullAdress" text NOT NULL,
+    "fullAddress" text NOT NULL,
     landmark text,
     city text NOT NULL,
     state text NOT NULL,
@@ -102,6 +112,47 @@ CREATE TABLE public."Address" (
 
 
 ALTER TABLE public."Address" OWNER TO postgres;
+
+--
+-- Name: BankDetails; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."BankDetails" (
+    id text NOT NULL,
+    ifsc text NOT NULL,
+    branch text NOT NULL,
+    "restaurantId" text NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "accountHolderName" text NOT NULL,
+    "accountNumber" text NOT NULL,
+    "bankName" text NOT NULL
+);
+
+
+ALTER TABLE public."BankDetails" OWNER TO postgres;
+
+--
+-- Name: Document; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Document" (
+    id text NOT NULL,
+    name text NOT NULL,
+    status public."DOCUMENT_STATUS" DEFAULT 'PENDING'::public."DOCUMENT_STATUS" NOT NULL,
+    note text,
+    "restaurantId" text NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "assetId" text NOT NULL,
+    "documentType" text NOT NULL,
+    "publicId" text NOT NULL,
+    "resourceType" text NOT NULL,
+    size double precision NOT NULL
+);
+
+
+ALTER TABLE public."Document" OWNER TO postgres;
 
 --
 -- Name: OtpCodes; Type: TABLE; Schema: public; Owner: postgres
@@ -128,14 +179,15 @@ CREATE TABLE public."Restaurant" (
     id text NOT NULL,
     name text NOT NULL,
     "ownerId" text NOT NULL,
-    address text NOT NULL,
     city text NOT NULL,
     "pinCode" text NOT NULL,
-    latitude double precision NOT NULL,
-    longitude double precision NOT NULL,
+    latitude double precision,
+    longitude double precision,
     "isOpen" boolean DEFAULT true NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "fullAddress" text NOT NULL,
+    status public."RESTAURANT_STATUS" DEFAULT 'PENDING'::public."RESTAURANT_STATUS" NOT NULL
 );
 
 
@@ -206,6 +258,22 @@ ALTER TABLE ONLY public."Address"
 
 
 --
+-- Name: BankDetails BankDetails_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BankDetails"
+    ADD CONSTRAINT "BankDetails_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Document Document_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Document"
+    ADD CONSTRAINT "Document_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: OtpCodes OtpCodes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -246,17 +314,17 @@ ALTER TABLE ONLY public._prisma_migrations
 
 
 --
+-- Name: BankDetails_restaurantId_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX "BankDetails_restaurantId_key" ON public."BankDetails" USING btree ("restaurantId");
+
+
+--
 -- Name: OtpCodes_identifier_purpose_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX "OtpCodes_identifier_purpose_idx" ON public."OtpCodes" USING btree (identifier, purpose);
-
-
---
--- Name: Restaurant_ownerId_key; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE UNIQUE INDEX "Restaurant_ownerId_key" ON public."Restaurant" USING btree ("ownerId");
 
 
 --
@@ -299,7 +367,23 @@ CREATE UNIQUE INDEX "User_username_key" ON public."User" USING btree (username);
 --
 
 ALTER TABLE ONLY public."Address"
-    ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+    ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: BankDetails BankDetails_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."BankDetails"
+    ADD CONSTRAINT "BankDetails_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Document Document_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Document"
+    ADD CONSTRAINT "Document_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -307,7 +391,7 @@ ALTER TABLE ONLY public."Address"
 --
 
 ALTER TABLE ONLY public."OtpCodes"
-    ADD CONSTRAINT "OtpCodes_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+    ADD CONSTRAINT "OtpCodes_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -315,7 +399,7 @@ ALTER TABLE ONLY public."OtpCodes"
 --
 
 ALTER TABLE ONLY public."Restaurant"
-    ADD CONSTRAINT "Restaurant_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+    ADD CONSTRAINT "Restaurant_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -323,19 +407,12 @@ ALTER TABLE ONLY public."Restaurant"
 --
 
 ALTER TABLE ONLY public."Session"
-    ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
-
-
---
--- Name: SCHEMA public; Type: ACL; Schema: -; Owner: postgres
---
-
-REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+    ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict zAkBI8WMAK5KmlKNQvMlOriUh9jyrICffJysNC9zhVqeV5LJi0yvanbEeL17OP5
+\unrestrict PtWL8nKkF08l6dcoAiO2wVW8iWDhpqc5JPWjjpJDMz6XJvYrX7Zwz9lE5Ggj12X
 

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { User } from "../../generated/prisma/browser.js";
-import { OTP_PURPOSE } from "../../generated/prisma/enums.js";
+import { OTP_PURPOSE, ROLE } from "../../generated/prisma/enums.js";
 import { UserCreateInput } from "../../generated/prisma/models.js";
 import { prisma } from "../../lib/prismaClient.js";
 import { otpService } from "../../services/otp.service.js";
@@ -12,7 +12,7 @@ import { comparePassword, hashPassword } from "./auth.utils.js";
 export const registerUserService = async (
   data: UserCreateInput,
 ): Promise<{ user: Omit<User, "password"> }> => {
-  const { username, email, mobile, name, password } = data;
+  const { username, email, mobile, name, password, role } = data;
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ username }, { email }, { mobile }],
@@ -35,6 +35,7 @@ export const registerUserService = async (
       email,
       mobile,
       password: hashedPassword,
+      role: role ?? ROLE.USER,
     },
   });
 

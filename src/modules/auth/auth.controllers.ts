@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { OTP_PURPOSE } from "../../generated/prisma/enums.js";
+import { OTP_PURPOSE, ROLE } from "../../generated/prisma/enums.js";
 import { otpService } from "../../services/otp.service.js";
 import { smsService } from "../../services/sms.service.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
@@ -27,7 +27,14 @@ export const registerUser = async (req: Request, res: Response) => {
   try {
     const validatedData = UserRegisterSchema.parse(req.body);
 
-    const { user } = await registerUserService(validatedData);
+    const { user } = await registerUserService({
+      username: validatedData.username,
+      name: validatedData.name,
+      email: validatedData.email,
+      mobile: validatedData.mobile,
+      password: validatedData.password,
+      role: validatedData.role as ROLE,
+    });
 
     return apiResponseUtils.success({
       res,

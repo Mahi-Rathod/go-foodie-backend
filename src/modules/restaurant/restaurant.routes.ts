@@ -3,7 +3,10 @@ import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { upload } from "../../middlewares/upload.middleware.js";
 import {
   applyForRestaurant,
+  getRestaurantsById,
   submitRestaurantBankDetails,
+  updateRestaurantDocumentStatus,
+  updateRestaurantStatus,
   uploadRestaurantDocuments,
 } from "./restaurant.controllers.js";
 
@@ -17,17 +20,23 @@ router.post(
 );
 
 router.post(
-  "/upload-restaurant-documents",
+  "/documents/:restaurantId/",
   authMiddleware.verifyToken,
-  upload.fields([
-    { name: "certificate", maxCount: 1 },
-    { name: "fssaiCertificate", maxCount: 1 },
-    { name: "gstCertificate", maxCount: 1 },
-    { name: "panCard", maxCount: 1 },
-    { name: "aadharCard", maxCount: 1 },
-    { name: "signature", maxCount: 1 },
-  ]),
+  upload.single("file"),
   uploadRestaurantDocuments,
 );
 
+router.get("/:restaurantId/", authMiddleware.verifyToken, getRestaurantsById);
+
+router.patch(
+  "/status/:restaurantId/",
+  authMiddleware.verifyAdmin,
+  updateRestaurantStatus,
+);
+
+router.patch(
+  "/documents/:documentId/",
+  authMiddleware.verifyAdmin,
+  updateRestaurantDocumentStatus,
+);
 export default router;

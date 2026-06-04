@@ -149,7 +149,14 @@ model OtpCodes {
 model Document {
   id     String @id @default(uuid())
   name   String
-  url    String
+
+  documentType  String
+  publicId      String
+  assetId       String
+  resourceType  String
+  
+  size          Float
+  
   status DOCUMENT_STATUS @default(PENDING)
   note   String?
 
