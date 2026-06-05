@@ -1,21 +1,31 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import {
-  DOCUMENT_STATUS,
-  RESTAURANT_STATUS,
-} from "../../generated/prisma/client.js";
+import { RESTAURANT_STATUS } from "../../generated/prisma/client.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
 import { AppError } from "../../utils/app.error.js";
 import {
   applyForRestaurantService,
   documentUploadService,
+  getAllRestaurantsService,
   getRestaurantByIdService,
   getRestaurantDocumentsService,
+  getRestaurantsByUserIdService,
   submitRestaurantBankDetailsService,
+  toggleRestaurantOpenService,
+  updateRestaurantDetailsService,
+} from "./restaurant.services.js";
+
+import {
+  ApplyForRestaurantSchema,
+  BankDetailsSchema,
+  UpdateRestaurantSchema,
+} from "./schemas.js";
+
+import { DOCUMENT_STATUS } from "../../generated/prisma/enums.js";
+import {
   updateRestaurantDocumentStatusService,
   updateRestaurantStatusService,
 } from "./restaurant.services.js";
-import { ApplyForRestaurantSchema, BankDetailsSchema } from "./schemas.js";
 
 export const applyForRestaurant = async (req: Request, res: Response) => {
   try {
@@ -183,6 +193,196 @@ export const getRestaurantsById = async (req: Request, res: Response) => {
     return apiResponseUtils.error({
       res,
       message: "Failed to retrieve restaurant details",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const getAllRestaurants = async (req: Request, res: Response) => {
+  try {
+    const { page, limit, status, city, search } = req.query as {
+      page?: string;
+      limit?: string;
+      status?: RESTAURANT_STATUS;
+      city?: string;
+      search?: string;
+    };
+
+    const parsedPage = page ? parseInt(page, 10) : 1;
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+
+    const { restaurants, total } = await getAllRestaurantsService({
+      page: parsedPage,
+      limit: parsedLimit,
+      ...(status && { status }),
+      ...(city && { city }),
+      ...(search && { search }),
+    });
+
+    return apiResponseUtils.paginated({
+      res,
+      message: "Restaurants retrieved successfully",
+      results: restaurants,
+      total,
+      page: parsedPage,
+      limit: parsedLimit,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to retrieve restaurants",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const getMyRestaurants = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.user;
+    const restaurants = await getRestaurantsByUserIdService(id);
+
+    return apiResponseUtils.success({
+      res,
+      message: "Your restaurants retrieved successfully",
+      data: restaurants,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to retrieve your restaurants",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const updateRestaurantDetails = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+    const { id: ownerId } = req.user;
+    const validatedData = UpdateRestaurantSchema.parse(req.body);
+
+    const data = Object.fromEntries(
+      Object.entries(validatedData).filter(([, v]) => v !== undefined),
+    ) as Parameters<typeof updateRestaurantDetailsService>[0]["data"];
+
+    const restaurant = await updateRestaurantDetailsService({
+      restaurantId,
+      ownerId,
+      data,
+    });
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurant details updated successfully",
+      data: restaurant,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return apiResponseUtils.error({
+        res,
+        message: "Validation error",
+        statusCode: 400,
+        error: error.message,
+      });
+    }
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to update restaurant details",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+export const toggleRestaurantOpen = async (req: Request, res: Response) => {
+  try {
+    const { restaurantId } = req.params as { restaurantId: string };
+    const { id: ownerId } = req.user;
+
+    const restaurant = await toggleRestaurantOpenService({
+      restaurantId,
+      ownerId,
+    });
+
+    return apiResponseUtils.success({
+      res,
+      message: `Restaurant is now ${restaurant.isOpen ? "open" : "closed"}`,
+      data: restaurant,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to toggle restaurant open status",
+      statusCode: 500,
+      error: "Internal Server Error",
+    });
+  }
+};
+
+//Controllers for admin
+
+export const getRestaurantsByUserId = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params as { userId: string };
+    const restaurants = await getRestaurantsByUserIdService(userId);
+
+    return apiResponseUtils.success({
+      res,
+      message: "Restaurants retrieved successfully",
+      data: restaurants,
+      statusCode: 200,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return apiResponseUtils.error({
+        res,
+        message: error.message,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+    }
+    return apiResponseUtils.error({
+      res,
+      message: "Failed to retrieve restaurants",
       statusCode: 500,
       error: "Internal Server Error",
     });
