@@ -95,7 +95,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       message: "Users fetched successfully",
       results: users.results,
       total: users.total,
-      page: 1,
+      offset: Number(offset || 0),
       limit: users.limit,
       statusCode: 200,
     });

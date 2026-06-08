@@ -201,19 +201,19 @@ export const getRestaurantsById = async (req: Request, res: Response) => {
 
 export const getAllRestaurants = async (req: Request, res: Response) => {
   try {
-    const { page, limit, status, city, search } = req.query as {
-      page?: string;
+    const { offset, limit, status, city, search } = req.query as {
+      offset?: string;
       limit?: string;
       status?: RESTAURANT_STATUS;
       city?: string;
       search?: string;
     };
 
-    const parsedPage = page ? parseInt(page, 10) : 1;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
 
     const { restaurants, total } = await getAllRestaurantsService({
-      page: parsedPage,
+      offset: parsedOffset,
       limit: parsedLimit,
       ...(status && { status }),
       ...(city && { city }),
@@ -225,7 +225,7 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
       message: "Restaurants retrieved successfully",
       results: restaurants,
       total,
-      page: parsedPage,
+      offset: Number(offset || 0),
       limit: parsedLimit,
       statusCode: 200,
     });

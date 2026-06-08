@@ -236,20 +236,20 @@ export const getRestaurantByIdService = async (restaurantId: string) => {
 };
 
 export const getAllRestaurantsService = async ({
-  page = 1,
+  offset = 0,
   limit = 10,
   status,
   city,
   search,
 }: {
-  page?: number;
+  offset?: number;
   limit?: number;
   status?: RESTAURANT_STATUS;
   city?: string;
   search?: string;
 }) => {
   try {
-    const skip = (page - 1) * limit;
+    const skip = offset;
 
     const where: Prisma.RestaurantWhereInput = {
       ...(status && { status }),

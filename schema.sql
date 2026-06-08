@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict PtWL8nKkF08l6dcoAiO2wVW8iWDhpqc5JPWjjpJDMz6XJvYrX7Zwz9lE5Ggj12X
+\restrict dxYCUjfLud0h8a7BjDA8erc5ntZ1c5huXr9EUHKVXUDydWdJdarjzLz6bdWkE5A
 
 -- Dumped from database version 15.18 (Debian 15.18-1.pgdg13+1)
 -- Dumped by pg_dump version 15.18 (Debian 15.18-1.pgdg13+1)
@@ -43,6 +43,24 @@ CREATE TYPE public."DOCUMENT_STATUS" AS ENUM (
 
 
 ALTER TYPE public."DOCUMENT_STATUS" OWNER TO postgres;
+
+--
+-- Name: ORDER_STATUS; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public."ORDER_STATUS" AS ENUM (
+    'PENDING',
+    'CONFIRMED',
+    'PREPARING',
+    'READY_FOR_DELIVERY',
+    'IN_TRANSIT',
+    'DELIVERED',
+    'CANCELLED',
+    'RETURNED'
+);
+
+
+ALTER TYPE public."ORDER_STATUS" OWNER TO postgres;
 
 --
 -- Name: OTP_PURPOSE; Type: TYPE; Schema: public; Owner: postgres
@@ -90,6 +108,36 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: Addon; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Addon" (
+    id text NOT NULL,
+    "addonGroupId" text NOT NULL,
+    name text NOT NULL,
+    price numeric(10,2) NOT NULL,
+    "isAvailable" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public."Addon" OWNER TO postgres;
+
+--
+-- Name: AddonGroup; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."AddonGroup" (
+    id text NOT NULL,
+    "menuItemId" text NOT NULL,
+    name text NOT NULL,
+    "minSelect" integer DEFAULT 0 NOT NULL,
+    "maxSelect" integer DEFAULT 1 NOT NULL
+);
+
+
+ALTER TABLE public."AddonGroup" OWNER TO postgres;
+
+--
 -- Name: Address; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -133,6 +181,40 @@ CREATE TABLE public."BankDetails" (
 ALTER TABLE public."BankDetails" OWNER TO postgres;
 
 --
+-- Name: Cart; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Cart" (
+    id text NOT NULL,
+    "userId" text NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."Cart" OWNER TO postgres;
+
+--
+-- Name: CartItem; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."CartItem" (
+    id text NOT NULL,
+    "userId" text NOT NULL,
+    "menuItemId" text NOT NULL,
+    "variantGroupId" text,
+    "addonGroupId" text,
+    quantity integer DEFAULT 1 NOT NULL,
+    price numeric(10,2) NOT NULL,
+    "cartId" text NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."CartItem" OWNER TO postgres;
+
+--
 -- Name: Document; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -153,6 +235,87 @@ CREATE TABLE public."Document" (
 
 
 ALTER TABLE public."Document" OWNER TO postgres;
+
+--
+-- Name: MenuCategory; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."MenuCategory" (
+    id text NOT NULL,
+    "restaurantId" text NOT NULL,
+    name text NOT NULL,
+    description text,
+    image text,
+    "sortOrder" integer DEFAULT 0 NOT NULL,
+    "isActive" boolean DEFAULT true NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."MenuCategory" OWNER TO postgres;
+
+--
+-- Name: MenuItem; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."MenuItem" (
+    id text NOT NULL,
+    "restaurantId" text NOT NULL,
+    "categoryId" text NOT NULL,
+    name text NOT NULL,
+    description text,
+    price numeric(10,2) NOT NULL,
+    "isVeg" boolean DEFAULT true NOT NULL,
+    "isAvailable" boolean DEFAULT true NOT NULL,
+    "prepTimeMins" integer DEFAULT 15 NOT NULL,
+    calories integer,
+    allergens text[],
+    tags text[],
+    image text,
+    "sortOrder" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."MenuItem" OWNER TO postgres;
+
+--
+-- Name: Order; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Order" (
+    id text NOT NULL,
+    "userId" text NOT NULL,
+    "restaurantId" text NOT NULL,
+    "totalAmount" numeric(10,2) NOT NULL,
+    status public."ORDER_STATUS" DEFAULT 'PENDING'::public."ORDER_STATUS" NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."Order" OWNER TO postgres;
+
+--
+-- Name: OrderItem; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."OrderItem" (
+    id text NOT NULL,
+    "orderId" text NOT NULL,
+    "menuItemId" text NOT NULL,
+    "variantGroupId" text,
+    "addonGroupId" text,
+    quantity integer DEFAULT 1 NOT NULL,
+    price numeric(10,2) NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."OrderItem" OWNER TO postgres;
 
 --
 -- Name: OtpCodes; Type: TABLE; Schema: public; Owner: postgres
@@ -232,6 +395,36 @@ CREATE TABLE public."User" (
 ALTER TABLE public."User" OWNER TO postgres;
 
 --
+-- Name: Variant; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Variant" (
+    id text NOT NULL,
+    "variantGroupId" text NOT NULL,
+    name text NOT NULL,
+    "priceModifier" numeric(10,2) NOT NULL,
+    "isDefault" boolean DEFAULT false NOT NULL,
+    "isAvailable" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public."Variant" OWNER TO postgres;
+
+--
+-- Name: VariantGroup; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."VariantGroup" (
+    id text NOT NULL,
+    "menuItemId" text NOT NULL,
+    name text NOT NULL,
+    "isRequired" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public."VariantGroup" OWNER TO postgres;
+
+--
 -- Name: _prisma_migrations; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -250,6 +443,22 @@ CREATE TABLE public._prisma_migrations (
 ALTER TABLE public._prisma_migrations OWNER TO postgres;
 
 --
+-- Name: AddonGroup AddonGroup_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."AddonGroup"
+    ADD CONSTRAINT "AddonGroup_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Addon Addon_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Addon"
+    ADD CONSTRAINT "Addon_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: Address Address_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -266,11 +475,59 @@ ALTER TABLE ONLY public."BankDetails"
 
 
 --
+-- Name: CartItem CartItem_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."CartItem"
+    ADD CONSTRAINT "CartItem_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Cart Cart_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Cart"
+    ADD CONSTRAINT "Cart_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: Document Document_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public."Document"
     ADD CONSTRAINT "Document_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: MenuCategory MenuCategory_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuCategory"
+    ADD CONSTRAINT "MenuCategory_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: MenuItem MenuItem_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuItem"
+    ADD CONSTRAINT "MenuItem_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: OrderItem OrderItem_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."OrderItem"
+    ADD CONSTRAINT "OrderItem_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Order Order_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Order"
+    ADD CONSTRAINT "Order_pkey" PRIMARY KEY (id);
 
 
 --
@@ -303,6 +560,22 @@ ALTER TABLE ONLY public."Session"
 
 ALTER TABLE ONLY public."User"
     ADD CONSTRAINT "User_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: VariantGroup VariantGroup_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."VariantGroup"
+    ADD CONSTRAINT "VariantGroup_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Variant Variant_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Variant"
+    ADD CONSTRAINT "Variant_pkey" PRIMARY KEY (id);
 
 
 --
@@ -363,6 +636,22 @@ CREATE UNIQUE INDEX "User_username_key" ON public."User" USING btree (username);
 
 
 --
+-- Name: AddonGroup AddonGroup_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."AddonGroup"
+    ADD CONSTRAINT "AddonGroup_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Addon Addon_addonGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Addon"
+    ADD CONSTRAINT "Addon_addonGroupId_fkey" FOREIGN KEY ("addonGroupId") REFERENCES public."AddonGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Address Address_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -379,11 +668,123 @@ ALTER TABLE ONLY public."BankDetails"
 
 
 --
+-- Name: CartItem CartItem_addonGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."CartItem"
+    ADD CONSTRAINT "CartItem_addonGroupId_fkey" FOREIGN KEY ("addonGroupId") REFERENCES public."AddonGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CartItem CartItem_cartId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."CartItem"
+    ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES public."Cart"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CartItem CartItem_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."CartItem"
+    ADD CONSTRAINT "CartItem_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CartItem CartItem_variantGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."CartItem"
+    ADD CONSTRAINT "CartItem_variantGroupId_fkey" FOREIGN KEY ("variantGroupId") REFERENCES public."VariantGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Cart Cart_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Cart"
+    ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Document Document_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public."Document"
     ADD CONSTRAINT "Document_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: MenuCategory MenuCategory_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuCategory"
+    ADD CONSTRAINT "MenuCategory_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE RESTRICT;
+
+
+--
+-- Name: MenuItem MenuItem_categoryId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuItem"
+    ADD CONSTRAINT "MenuItem_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES public."MenuCategory"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: MenuItem MenuItem_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuItem"
+    ADD CONSTRAINT "MenuItem_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderItem OrderItem_addonGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."OrderItem"
+    ADD CONSTRAINT "OrderItem_addonGroupId_fkey" FOREIGN KEY ("addonGroupId") REFERENCES public."AddonGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderItem OrderItem_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."OrderItem"
+    ADD CONSTRAINT "OrderItem_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderItem OrderItem_orderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."OrderItem"
+    ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES public."Order"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: OrderItem OrderItem_variantGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."OrderItem"
+    ADD CONSTRAINT "OrderItem_variantGroupId_fkey" FOREIGN KEY ("variantGroupId") REFERENCES public."VariantGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Order Order_restaurantId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Order"
+    ADD CONSTRAINT "Order_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Order Order_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Order"
+    ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -411,8 +812,24 @@ ALTER TABLE ONLY public."Session"
 
 
 --
+-- Name: VariantGroup VariantGroup_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."VariantGroup"
+    ADD CONSTRAINT "VariantGroup_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Variant Variant_variantGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Variant"
+    ADD CONSTRAINT "Variant_variantGroupId_fkey" FOREIGN KEY ("variantGroupId") REFERENCES public."VariantGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict PtWL8nKkF08l6dcoAiO2wVW8iWDhpqc5JPWjjpJDMz6XJvYrX7Zwz9lE5Ggj12X
+\unrestrict dxYCUjfLud0h8a7BjDA8erc5ntZ1c5huXr9EUHKVXUDydWdJdarjzLz6bdWkE5A
 

@@ -27,7 +27,7 @@ class APIResponseUtils {
     message,
     results,
     total,
-    page,
+    offset,
     limit,
     statusCode,
   }: {
@@ -35,7 +35,7 @@ class APIResponseUtils {
     message: string;
     results: T[];
     total: number;
-    page: number;
+    offset: number;
     limit: number;
     statusCode: number;
   }): Response<PaginatedResponse<T>> {
@@ -44,17 +44,17 @@ class APIResponseUtils {
       message,
       results,
       total,
-      page,
+      offset,
       limit,
       totalPages: Math.ceil(total / limit),
-      nextPage:
-        page < Math.ceil(total / limit)
-          ? `${this.baseUrl}/api/?page=${page + 1}&limit=${limit}`
-          : null,
-      previousPage:
-        page > 1
-          ? `${this.baseUrl}/api/?page=${page - 1}&limit=${limit}`
-          : null,
+      // nextPage:
+      //   offset < Math.ceil(total / limit)
+      //     ? `${this.baseUrl}/api/?offset=${offset + 1}&limit=${limit}`
+      //     : null,
+      // previousPage:
+      //   offset > 1
+      //     ? `${this.baseUrl}/api/?offset=${offset - 1}&limit=${limit}`
+      //     : null,
     });
   }
 

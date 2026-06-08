@@ -40,6 +40,18 @@ enum DOCUMENT_STATUS {
   REJECTED
 }
 
+
+enum ORDER_STATUS {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY_FOR_DELIVERY
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
 model User {
   id          String    @id @default(uuid())
   username    String    @unique
@@ -56,6 +68,9 @@ model User {
   OtpCodes    OtpCodes[]
 
   sessions    Session[]
+
+  carts       Cart[]
+  orders      Order[]
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -123,6 +138,11 @@ model Restaurant {
   documents     Document[]
   bankDetails  BankDetails?
 
+  menuCategories MenuCategory[]
+  menuItems MenuItem[]
+
+  orders Order[]
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -180,4 +200,155 @@ model BankDetails{
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model MenuCategory {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  description  String?
+  imageId      String?
+  image        Image?     @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  sortOrder    Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  items        MenuItem[]
+}
+
+model MenuItem {
+  id           String        @id @default(cuid())
+  restaurantId String
+  categoryId   String
+  name         String
+  description  String?
+  price        Decimal       @db.Decimal(10, 2)
+  isVeg        Boolean       @default(true)
+  isAvailable  Boolean       @default(true)
+  prepTimeMins Int           @default(15)
+  calories     Int?
+  allergens    String[]      // ["gluten", "dairy", "nuts"]
+  tags         String[]      // ["bestseller", "spicy", "new"]
+  image        String?
+  sortOrder    Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  restaurant   Restaurant    @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category     MenuCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  variantGroups VariantGroup[]
+  addonGroups  AddonGroup[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+
+model VariantGroup {
+  id         String    @id @default(cuid())
+  menuItemId String
+  name       String    // "Size", "Crust Type"
+  isRequired Boolean   @default(true)
+  variants   Variant[]
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+model Variant {
+  id             String       @id @default(cuid())
+  variantGroupId String
+  name           String       // "Large"
+  priceModifier  Decimal      @db.Decimal(10, 2)  // +40.00 (can be negative for discounts)
+  isDefault      Boolean      @default(false)
+  isAvailable    Boolean      @default(true)
+  variantGroup   VariantGroup @relation(fields: [variantGroupId], references: [id], onDelete: Cascade)
+}
+
+model AddonGroup {
+  id         String   @id @default(cuid())
+  menuItemId String
+  name       String   // "Extra Toppings"
+  minSelect  Int      @default(0)
+  maxSelect  Int      @default(1)
+  addons     Addon[]
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+model Addon {
+  id          String     @id @default(cuid())
+  addonGroupId String
+  name        String     // "Extra Cheese"
+  price       Decimal    @db.Decimal(10, 2)
+  isAvailable Boolean    @default(true)
+  addonGroup  AddonGroup @relation(fields: [addonGroupId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id          String     @id @default(cuid())
+  userId      String
+  menuItemId  String
+  menuItem    MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  variantGroupId   String?
+  variantGroup     VariantGroup?   @relation(fields: [variantGroupId], references: [id], onDelete: Cascade)
+  addonGroupId String?
+  addonGroup  AddonGroup? @relation(fields: [addonGroupId], references: [id], onDelete: Cascade)
+  quantity    Int        @default(1)
+  price       Decimal    @db.Decimal(10, 2)
+  cartId      String
+  cart        Cart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model OrderItem {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId  String
+  menuItem    MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  variantGroupId   String?
+  variantGroup     VariantGroup?   @relation(fields: [variantGroupId], references: [id], onDelete: Cascade)
+  addonGroupId String?
+  addonGroup  AddonGroup? @relation(fields: [addonGroupId], references: [id], onDelete: Cascade)
+  quantity    Int        @default(1)
+  price       Decimal    @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Cart {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cartItems   CartItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Order {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  totalAmount Decimal    @db.Decimal(10, 2)
+  status      ORDER_STATUS @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Image{
+  id          String     @id @default(cuid())
+  publicId    String
+  assetId     String
+  resourceType String
+  size        Float
+  menuCategories MenuCategory[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }

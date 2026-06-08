@@ -21,11 +21,14 @@ app.get("/health", (req, res) => {
 });
 
 import authRoutes from "./modules/auth/auth.routes.js";
+import menuRoutes from "./modules/menu/menu.routes.js";
 import restaurantroutes from "./modules/restaurant/restaurant.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantroutes);
+
+app.use("/api/menu", menuRoutes);
 
 export default app;
