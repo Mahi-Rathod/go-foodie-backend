@@ -247,13 +247,12 @@ model MenuItem {
 
 model VariantGroup {
   id         String    @id @default(cuid())
-  menuItemId String
   name       String    // "Size", "Crust Type"
   isRequired Boolean   @default(true)
   variants   Variant[]
-  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  cartItems    CartItem[]
-  orderItems   OrderItem[]
+  menuItems  MenuItem[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 }
 
 model Variant {
@@ -268,14 +267,14 @@ model Variant {
 
 model AddonGroup {
   id         String   @id @default(cuid())
-  menuItemId String
   name       String   // "Extra Toppings"
   minSelect  Int      @default(0)
   maxSelect  Int      @default(1)
   addons     Addon[]
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  cartItems    CartItem[]
-  orderItems   OrderItem[]
+
+  menuItems  MenuItem[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 }
 
 model Addon {

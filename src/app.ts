@@ -20,6 +20,8 @@ app.get("/health", (req, res) => {
   res.status(200).json({ message: "Server is running" });
 });
 
+import addonRoutes from "./modules/addon/addon.routes.js";
+import variantRoutes from "./modules/variant/variant.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import menuRoutes from "./modules/menu/menu.routes.js";
 import restaurantroutes from "./modules/restaurant/restaurant.routes.js";
@@ -30,5 +32,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/restaurants", restaurantroutes);
 
 app.use("/api/menu", menuRoutes);
-
+app.use("/api/addon", addonRoutes);
+app.use("/api/variant", variantRoutes);
 export default app;

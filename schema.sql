@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict dxYCUjfLud0h8a7BjDA8erc5ntZ1c5huXr9EUHKVXUDydWdJdarjzLz6bdWkE5A
+\restrict 5siF9eSrQgjCC4yDWA0qigUjgA8ao87PdhyHdGQIUcPqJGQEE6vzLkKWlsNCyD2
 
 -- Dumped from database version 15.18 (Debian 15.18-1.pgdg13+1)
 -- Dumped by pg_dump version 15.18 (Debian 15.18-1.pgdg13+1)
@@ -128,7 +128,6 @@ ALTER TABLE public."Addon" OWNER TO postgres;
 
 CREATE TABLE public."AddonGroup" (
     id text NOT NULL,
-    "menuItemId" text NOT NULL,
     name text NOT NULL,
     "minSelect" integer DEFAULT 0 NOT NULL,
     "maxSelect" integer DEFAULT 1 NOT NULL
@@ -237,6 +236,23 @@ CREATE TABLE public."Document" (
 ALTER TABLE public."Document" OWNER TO postgres;
 
 --
+-- Name: Image; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."Image" (
+    id text NOT NULL,
+    "publicId" text NOT NULL,
+    "assetId" text NOT NULL,
+    "resourceType" text NOT NULL,
+    size double precision NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."Image" OWNER TO postgres;
+
+--
 -- Name: MenuCategory; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -245,11 +261,11 @@ CREATE TABLE public."MenuCategory" (
     "restaurantId" text NOT NULL,
     name text NOT NULL,
     description text,
-    image text,
     "sortOrder" integer DEFAULT 0 NOT NULL,
     "isActive" boolean DEFAULT true NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "imageId" text
 );
 
 
@@ -425,6 +441,30 @@ CREATE TABLE public."VariantGroup" (
 ALTER TABLE public."VariantGroup" OWNER TO postgres;
 
 --
+-- Name: _AddonGroupToMenuItem; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."_AddonGroupToMenuItem" (
+    "A" text NOT NULL,
+    "B" text NOT NULL
+);
+
+
+ALTER TABLE public."_AddonGroupToMenuItem" OWNER TO postgres;
+
+--
+-- Name: _MenuItemToVariantGroup; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public."_MenuItemToVariantGroup" (
+    "A" text NOT NULL,
+    "B" text NOT NULL
+);
+
+
+ALTER TABLE public."_MenuItemToVariantGroup" OWNER TO postgres;
+
+--
 -- Name: _prisma_migrations; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -496,6 +536,14 @@ ALTER TABLE ONLY public."Cart"
 
 ALTER TABLE ONLY public."Document"
     ADD CONSTRAINT "Document_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: Image Image_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."Image"
+    ADD CONSTRAINT "Image_pkey" PRIMARY KEY (id);
 
 
 --
@@ -579,6 +627,22 @@ ALTER TABLE ONLY public."Variant"
 
 
 --
+-- Name: _AddonGroupToMenuItem _AddonGroupToMenuItem_AB_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_AddonGroupToMenuItem"
+    ADD CONSTRAINT "_AddonGroupToMenuItem_AB_pkey" PRIMARY KEY ("A", "B");
+
+
+--
+-- Name: _MenuItemToVariantGroup _MenuItemToVariantGroup_AB_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_MenuItemToVariantGroup"
+    ADD CONSTRAINT "_MenuItemToVariantGroup_AB_pkey" PRIMARY KEY ("A", "B");
+
+
+--
 -- Name: _prisma_migrations _prisma_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -636,11 +700,17 @@ CREATE UNIQUE INDEX "User_username_key" ON public."User" USING btree (username);
 
 
 --
--- Name: AddonGroup AddonGroup_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: _AddonGroupToMenuItem_B_index; Type: INDEX; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public."AddonGroup"
-    ADD CONSTRAINT "AddonGroup_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+CREATE INDEX "_AddonGroupToMenuItem_B_index" ON public."_AddonGroupToMenuItem" USING btree ("B");
+
+
+--
+-- Name: _MenuItemToVariantGroup_B_index; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX "_MenuItemToVariantGroup_B_index" ON public."_MenuItemToVariantGroup" USING btree ("B");
 
 
 --
@@ -713,6 +783,14 @@ ALTER TABLE ONLY public."Cart"
 
 ALTER TABLE ONLY public."Document"
     ADD CONSTRAINT "Document_restaurantId_fkey" FOREIGN KEY ("restaurantId") REFERENCES public."Restaurant"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: MenuCategory MenuCategory_imageId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."MenuCategory"
+    ADD CONSTRAINT "MenuCategory_imageId_fkey" FOREIGN KEY ("imageId") REFERENCES public."Image"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -812,14 +890,6 @@ ALTER TABLE ONLY public."Session"
 
 
 --
--- Name: VariantGroup VariantGroup_menuItemId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public."VariantGroup"
-    ADD CONSTRAINT "VariantGroup_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
 -- Name: Variant Variant_variantGroupId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -828,8 +898,40 @@ ALTER TABLE ONLY public."Variant"
 
 
 --
+-- Name: _AddonGroupToMenuItem _AddonGroupToMenuItem_A_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_AddonGroupToMenuItem"
+    ADD CONSTRAINT "_AddonGroupToMenuItem_A_fkey" FOREIGN KEY ("A") REFERENCES public."AddonGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: _AddonGroupToMenuItem _AddonGroupToMenuItem_B_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_AddonGroupToMenuItem"
+    ADD CONSTRAINT "_AddonGroupToMenuItem_B_fkey" FOREIGN KEY ("B") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: _MenuItemToVariantGroup _MenuItemToVariantGroup_A_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_MenuItemToVariantGroup"
+    ADD CONSTRAINT "_MenuItemToVariantGroup_A_fkey" FOREIGN KEY ("A") REFERENCES public."MenuItem"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: _MenuItemToVariantGroup _MenuItemToVariantGroup_B_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public."_MenuItemToVariantGroup"
+    ADD CONSTRAINT "_MenuItemToVariantGroup_B_fkey" FOREIGN KEY ("B") REFERENCES public."VariantGroup"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dxYCUjfLud0h8a7BjDA8erc5ntZ1c5huXr9EUHKVXUDydWdJdarjzLz6bdWkE5A
+\unrestrict 5siF9eSrQgjCC4yDWA0qigUjgA8ao87PdhyHdGQIUcPqJGQEE6vzLkKWlsNCyD2
 
