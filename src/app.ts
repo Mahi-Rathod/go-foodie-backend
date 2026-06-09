@@ -24,6 +24,7 @@ import addonRoutes from "./modules/addon/addon.routes.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import cartRoutes from "./modules/cart/cart.routes.js";
 import menuRoutes from "./modules/menu/menu.routes.js";
+import orderRoutes from "./modules/order/order.routes.js";
 import restaurantroutes from "./modules/restaurant/restaurant.routes.js";
 import userRoutes from "./modules/user/user.routes.js";
 import variantRoutes from "./modules/variant/variant.routes.js";
@@ -36,5 +37,6 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/addon", addonRoutes);
 app.use("/api/variant", variantRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/order", orderRoutes);
 
 export default app;
