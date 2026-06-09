@@ -158,3 +158,92 @@ export const getCartService = async (userId: string): Promise<Cart> => {
     );
   }
 };
+
+export const updateCartItemService = async (
+  cartItemId: string,
+  data: {
+    quantity?: number;
+    variants?: string[];
+    addons?: string[];
+  },
+): Promise<CartItem> => {
+  try {
+    const existingCartItem = await prisma.cartItem.findUnique({
+      where: { id: cartItemId },
+    });
+    if (!existingCartItem) {
+      throw new AppError("Cart item not found", 404);
+    }
+
+    const variantsData = await prisma.variant.findMany({
+      where: {
+        id: {
+          in: data.variants || [],
+        },
+      },
+    });
+    if (variantsData.length !== (data.variants || []).length) {
+      throw new AppError("Some variants not found", 404);
+    }
+    const addonsData = await prisma.addon.findMany({
+      where: {
+        id: {
+          in: data.addons || [],
+        },
+      },
+    });
+    if (addonsData.length !== (data.addons || []).length) {
+      throw new AppError("Some addons not found", 404);
+    }
+
+    const cartItem = await prisma.cartItem.update({
+      where: { id: cartItemId },
+      data: {
+        quantity: data.quantity || existingCartItem.quantity,
+        variants: {
+          connect: variantsData.map((variant) => ({ id: variant.id })),
+        },
+        addons: {
+          connect: addonsData.map((addon) => ({ id: addon.id })),
+        },
+      },
+    });
+    if (!cartItem) {
+      throw new AppError("Failed to update cart item", 500);
+    }
+    return cartItem;
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      error instanceof Error ? error.message : "Failed to update cart item",
+      error instanceof AppError ? error.statusCode : 500,
+    );
+  }
+};
+
+export const deleteCartItemService = async (
+  cartItemId: string,
+): Promise<{ message: string }> => {
+  try {
+    const existingCartItem = await prisma.cartItem.findUnique({
+      where: { id: cartItemId },
+    });
+    if (!existingCartItem) {
+      throw new AppError("Cart item not found", 404);
+    }
+    await prisma.cartItem.delete({
+      where: { id: cartItemId },
+    });
+    return { message: "Cart item deleted successfully" };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw new AppError(
+      error instanceof Error ? error.message : "Failed to delete cart item",
+      error instanceof AppError ? error.statusCode : 500,
+    );
+  }
+};
