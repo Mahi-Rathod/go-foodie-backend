@@ -28,6 +28,7 @@ export const createMenuCategory = async (req: Request, res: Response) => {
       throw new AppError("Image is required", 400);
     }
     const uploadedImage = await imageService.upload(file);
+
     if (!uploadedImage.secureUrl) {
       throw new AppError("Failed to upload image", 500);
     }
@@ -57,6 +58,7 @@ export const createMenuCategory = async (req: Request, res: Response) => {
         error: error.message,
       });
     }
+
     return apiResponseUtils.error({
       res,
       message:
@@ -101,8 +103,8 @@ export const getAllMenuCategories = async (req: Request, res: Response) => {
         search: search ?? "",
         orderBy: orderBy ?? "createdAt",
         orderDirection: orderDirection ?? "asc",
-        isActive: isActive !== undefined ? isActive === "true" : true,
-        sortOrder: sortOrder ?? 0,
+        isActive: isActive !== undefined ? isActive === "true" : undefined,
+        sortOrder: sortOrder !== undefined ? Number(sortOrder) : undefined,
       });
 
     return apiResponseUtils.paginated({

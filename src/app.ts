@@ -1,16 +1,14 @@
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import { corsMiddleware } from "./middlewares/cors.middleware.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
+import router from "./routes/index.js";
 
 const app = express();
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true,
-  }),
-);
+app.use(corsMiddleware);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
@@ -20,23 +18,9 @@ app.get("/health", (req, res) => {
   res.status(200).json({ message: "Server is running" });
 });
 
-import addonRoutes from "./modules/addon/addon.routes.js";
-import authRoutes from "./modules/auth/auth.routes.js";
-import cartRoutes from "./modules/cart/cart.routes.js";
-import menuRoutes from "./modules/menu/menu.routes.js";
-import orderRoutes from "./modules/order/order.routes.js";
-import restaurantroutes from "./modules/restaurant/restaurant.routes.js";
-import userRoutes from "./modules/user/user.routes.js";
-import variantRoutes from "./modules/variant/variant.routes.js";
+app.use("/api", router);
 
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/restaurants", restaurantroutes);
-
-app.use("/api/menu", menuRoutes);
-app.use("/api/addon", addonRoutes);
-app.use("/api/variant", variantRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/order", orderRoutes);
+app.use(errorMiddleware.notFoundHandler);
+app.use(errorMiddleware.errorHandler);
 
 export default app;

@@ -11,21 +11,15 @@ export const createAddonGroupService = async ({
   minSelect: number;
   maxSelect: number;
 }): Promise<AddonGroup> => {
-  try {
-    const addonGroup = await prisma.addonGroup.create({
-      data: {
-        name,
-        minSelect,
-        maxSelect,
-      },
-    });
-    return addonGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create addon group", 500);
-  }
+  const addonGroup = await prisma.addonGroup.create({
+    data: {
+      name,
+      minSelect,
+      maxSelect,
+    },
+  });
+  
+  return addonGroup;
 };
 
 export const getAllAddonGroupsService = async ({
@@ -41,31 +35,24 @@ export const getAllAddonGroupsService = async ({
   orderBy: string;
   orderDirection: "asc" | "desc";
 }): Promise<{ addonGroups: AddonGroup[]; total: number }> => {
-  try {
-    const where: Prisma.AddonGroupWhereInput = {
-      ...(search && {
-        name: { contains: search, mode: "insensitive" },
-      }),
-    };
+  const where: Prisma.AddonGroupWhereInput = {
+    ...(search && {
+      name: { contains: search, mode: "insensitive" },
+    }),
+  };
 
-    const [addonGroups, total] = await Promise.all([
-      prisma.addonGroup.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-        include: { addons: true },
-      }),
-      prisma.addonGroup.count({ where }),
-    ]);
+  const [addonGroups, total] = await Promise.all([
+    prisma.addonGroup.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+      include: { addons: true },
+    }),
+    prisma.addonGroup.count({ where }),
+  ]);
 
-    return { addonGroups, total };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get addon groups", 500);
-  }
+  return { addonGroups, total };
 };
 
 export const getAddonGroupByIdService = async ({
@@ -73,21 +60,16 @@ export const getAddonGroupByIdService = async ({
 }: {
   addonGroupId: string;
 }): Promise<AddonGroup & { addons: Addon[] }> => {
-  try {
-    const addonGroup = await prisma.addonGroup.findUnique({
-      where: { id: addonGroupId },
-      include: { addons: true },
-    });
-    if (!addonGroup) {
-      throw new AppError("Addon group not found", 404);
-    }
-    return addonGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get addon group", 500);
+  const addonGroup = await prisma.addonGroup.findUnique({
+    where: { id: addonGroupId },
+    include: { addons: true },
+  });
+  
+  if (!addonGroup) {
+    throw new AppError("Addon group not found", 404);
   }
+  
+  return addonGroup;
 };
 
 export const updateAddonGroupService = async ({
@@ -97,38 +79,33 @@ export const updateAddonGroupService = async ({
   addonGroupId: string;
   data: Prisma.AddonGroupUpdateInput;
 }): Promise<AddonGroup> => {
-  try {
-    const existing = await prisma.addonGroup.findUnique({
-      where: { id: addonGroupId },
-    });
-    if (!existing) {
-      throw new AppError("Addon group not found", 404);
-    }
-
-    const minSelect =
-      typeof data.minSelect === "number" ? data.minSelect : existing.minSelect;
-    const maxSelect =
-      typeof data.maxSelect === "number" ? data.maxSelect : existing.maxSelect;
-
-    if (minSelect > maxSelect) {
-      throw new AppError(
-        "minSelect must be less than or equal to maxSelect",
-        400,
-      );
-    }
-
-    const addonGroup = await prisma.addonGroup.update({
-      where: { id: addonGroupId },
-      data,
-      include: { addons: true },
-    });
-    return addonGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update addon group", 500);
+  const existing = await prisma.addonGroup.findUnique({
+    where: { id: addonGroupId },
+  });
+  
+  if (!existing) {
+    throw new AppError("Addon group not found", 404);
   }
+
+  const minSelect =
+    typeof data.minSelect === "number" ? data.minSelect : existing.minSelect;
+  const maxSelect =
+    typeof data.maxSelect === "number" ? data.maxSelect : existing.maxSelect;
+
+  if (minSelect > maxSelect) {
+    throw new AppError(
+      "minSelect must be less than or equal to maxSelect",
+      400,
+    );
+  }
+
+  const addonGroup = await prisma.addonGroup.update({
+    where: { id: addonGroupId },
+    data,
+    include: { addons: true },
+  });
+  
+  return addonGroup;
 };
 
 export const deleteAddonGroupService = async ({
@@ -136,26 +113,21 @@ export const deleteAddonGroupService = async ({
 }: {
   addonGroupId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const existing = await prisma.addonGroup.findFirst({
-      where: {
-        id: addonGroupId,
-      },
-    });
-    if (!existing) {
-      throw new AppError("Addon group not found", 404);
-    }
-    await prisma.addonGroup.delete({
-      where: { id: addonGroupId },
-    });
-
-    return { message: "Addon group deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete addon group", 500);
+  const existing = await prisma.addonGroup.findFirst({
+    where: {
+      id: addonGroupId,
+    },
+  });
+  
+  if (!existing) {
+    throw new AppError("Addon group not found", 404);
   }
+  
+  await prisma.addonGroup.delete({
+    where: { id: addonGroupId },
+  });
+
+  return { message: "Addon group deleted successfully" };
 };
 
 export const createAddonService = async ({
@@ -169,29 +141,24 @@ export const createAddonService = async ({
   price: number;
   isAvailable: boolean;
 }): Promise<Addon> => {
-  try {
-    const addonGroup = await prisma.addonGroup.findUnique({
-      where: { id: addonGroupId },
-    });
-    if (!addonGroup) {
-      throw new AppError("Addon group not found", 404);
-    }
-
-    const addon = await prisma.addon.create({
-      data: {
-        name,
-        price: Number(price),
-        isAvailable,
-        addonGroup: { connect: { id: addonGroupId } },
-      },
-    });
-    return addon;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create addon", 500);
+  const addonGroup = await prisma.addonGroup.findUnique({
+    where: { id: addonGroupId },
+  });
+  
+  if (!addonGroup) {
+    throw new AppError("Addon group not found", 404);
   }
+
+  const addon = await prisma.addon.create({
+    data: {
+      name,
+      price: Number(price),
+      isAvailable,
+      addonGroup: { connect: { id: addonGroupId } },
+    },
+  });
+  
+  return addon;
 };
 
 export const getAddonsByGroupIdService = async ({
@@ -211,32 +178,25 @@ export const getAddonsByGroupIdService = async ({
   orderDirection: "asc" | "desc";
   isAvailable?: boolean;
 }): Promise<{ addons: Addon[]; total: number }> => {
-  try {
-    const where: Prisma.AddonWhereInput = {
-      ...(addonGroupId && { addonGroupId }),
-      ...(search && {
-        name: { contains: search, mode: "insensitive" },
-      }),
-      ...(isAvailable !== undefined && { isAvailable }),
-    };
+  const where: Prisma.AddonWhereInput = {
+    ...(addonGroupId && { addonGroupId }),
+    ...(search && {
+      name: { contains: search, mode: "insensitive" },
+    }),
+    ...(isAvailable !== undefined && { isAvailable }),
+  };
 
-    const [addons, total] = await Promise.all([
-      prisma.addon.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-      }),
-      prisma.addon.count({ where }),
-    ]);
+  const [addons, total] = await Promise.all([
+    prisma.addon.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+    }),
+    prisma.addon.count({ where }),
+  ]);
 
-    return { addons, total };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get addons", 500);
-  }
+  return { addons, total };
 };
 
 export const getAddonByIdService = async ({
@@ -244,22 +204,17 @@ export const getAddonByIdService = async ({
 }: {
   addonId: string;
 }): Promise<Addon> => {
-  try {
-    const addon = await prisma.addon.findFirst({
-      where: {
-        id: addonId,
-      },
-    });
-    if (!addon) {
-      throw new AppError("Addon not found", 404);
-    }
-    return addon;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get addon", 500);
+  const addon = await prisma.addon.findFirst({
+    where: {
+      id: addonId,
+    },
+  });
+  
+  if (!addon) {
+    throw new AppError("Addon not found", 404);
   }
+  
+  return addon;
 };
 
 export const updateAddonService = async ({
@@ -270,21 +225,16 @@ export const updateAddonService = async ({
   addonGroupId?: string;
   data: Prisma.AddonUpdateInput;
 }): Promise<Addon> => {
-  try {
-    const addon = await prisma.addon.update({
-      where: { id: addonId },
-      data,
-    });
-    if (!addon) {
-      throw new AppError("Addon not found", 404);
-    }
-    return addon;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update addon", 500);
+  const addon = await prisma.addon.update({
+    where: { id: addonId },
+    data,
+  });
+  
+  if (!addon) {
+    throw new AppError("Addon not found", 404);
   }
+  
+  return addon;
 };
 
 export const deleteAddonService = async ({
@@ -292,24 +242,19 @@ export const deleteAddonService = async ({
 }: {
   addonId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const existing = await prisma.addon.findFirst({
-      where: {
-        id: addonId,
-      },
-    });
-    if (!existing) {
-      throw new AppError("Addon not found", 404);
-    }
-
-    await prisma.addon.delete({
-      where: { id: addonId },
-    });
-    return { message: "Addon deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete addon", 500);
+  const existing = await prisma.addon.findFirst({
+    where: {
+      id: addonId,
+    },
+  });
+  
+  if (!existing) {
+    throw new AppError("Addon not found", 404);
   }
+
+  await prisma.addon.delete({
+    where: { id: addonId },
+  });
+  
+  return { message: "Addon deleted successfully" };
 };

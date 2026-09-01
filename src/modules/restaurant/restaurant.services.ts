@@ -21,24 +21,21 @@ export const applyForRestaurantService = async ({
   userId: string;
   data: Omit<RestaurantCreateInput, "owner">;
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.create({
-      data: {
-        name: data.name,
-        fullAddress: data.fullAddress,
-        city: data.city,
-        pinCode: data.pinCode,
-        latitude: data.latitude ?? null,
-        longitude: data.longitude ?? null,
-        owner: {
-          connect: { id: userId },
-        },
+  const restaurant = await prisma.restaurant.create({
+    data: {
+      name: data.name,
+      fullAddress: data.fullAddress,
+      city: data.city,
+      pinCode: data.pinCode,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+      owner: {
+        connect: { id: userId },
       },
-    });
-    return restaurant;
-  } catch (error) {
-    throw new AppError("Failed to apply for restaurant", 500);
-  }
+    },
+  });
+  
+  return restaurant;
 };
 
 export const submitRestaurantBankDetailsService = async ({
@@ -48,30 +45,28 @@ export const submitRestaurantBankDetailsService = async ({
   restaurantId: string;
   data: Omit<BankDetailsCreateInput, "restaurant">;
 }): Promise<{ bankDetails: BankDetails; restaurant: Restaurant | null }> => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-
-    const bankDetails = await prisma.bankDetails.create({
-      data: {
-        bankName: data.bankName,
-        accountNumber: data.accountNumber,
-        accountHolderName: data.accountHolderName,
-        ifsc: data.ifsc,
-        branch: data.branch,
-        restaurant: {
-          connect: { id: restaurantId },
-        },
-      },
-    });
-    return { bankDetails, restaurant };
-  } catch (error) {
-    throw new AppError("Failed to submit restaurant bank details", 500);
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
   }
+
+  const bankDetails = await prisma.bankDetails.create({
+    data: {
+      bankName: data.bankName,
+      accountNumber: data.accountNumber,
+      accountHolderName: data.accountHolderName,
+      ifsc: data.ifsc,
+      branch: data.branch,
+      restaurant: {
+        connect: { id: restaurantId },
+      },
+    },
+  });
+  
+  return { bankDetails, restaurant };
 };
 
 export const documentUploadService = async ({
@@ -83,79 +78,75 @@ export const documentUploadService = async ({
   documentType: string;
   file: Express.Multer.File;
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
+  }
 
-    const existingDocument = await prisma.document.findFirst({
-      where: {
-        restaurantId,
-        documentType,
-      },
-    });
+  const existingDocument = await prisma.document.findFirst({
+    where: {
+      restaurantId,
+      documentType,
+    },
+  });
 
-    if (
-      existingDocument?.status === "APPROVED" ||
-      existingDocument?.status === "PENDING"
-    ) {
-      throw new AppError(
-        `Document of type ${documentType} already exists for this restaurant`,
-        400,
-      );
-    }
+  if (
+    existingDocument?.status === "APPROVED" ||
+    existingDocument?.status === "PENDING"
+  ) {
+    throw new AppError(
+      `Document of type ${documentType} already exists for this restaurant`,
+      400,
+    );
+  }
 
-    const fileName = documentType + "_" + Date.now() + "_" + file.originalname;
+  const fileName = documentType + "_" + Date.now() + "_" + file.originalname;
 
-    const result = await cloudinaryService.uploadFile(file.buffer, fileName);
+  const result = await cloudinaryService.uploadFile(file.buffer, fileName);
 
-    if (!result || !result.secureUrl) {
-      throw new AppError("Failed to upload restaurant document", 500);
-    }
-    const { publicId, assetId, secureUrl, resourceType, size } = result;
-
-    if (existingDocument?.status === "REJECTED") {
-      await prisma.document.update({
-        where: { id: existingDocument.id },
-        data: { publicId, assetId, resourceType, size, status: "PENDING" },
-      });
-
-      return {
-        secureUrl,
-        document: {
-          ...existingDocument,
-          publicId,
-          assetId,
-          secureUrl,
-          resourceType,
-          size,
-        },
-      };
-    }
-
-    const document = await prisma.document.create({
-      data: {
-        documentType,
-        publicId: publicId,
-        assetId: assetId,
-        name: file.originalname,
-        resourceType: resourceType,
-        size,
-        restaurant: {
-          connect: { id: restaurantId },
-        },
-      },
-    });
-    return { secureUrl, document };
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
+  if (!result || !result.secureUrl) {
     throw new AppError("Failed to upload restaurant document", 500);
   }
+  
+  const { publicId, assetId, secureUrl, resourceType, size } = result;
+
+  if (existingDocument?.status === "REJECTED") {
+    await prisma.document.update({
+      where: { id: existingDocument.id },
+      data: { publicId, assetId, resourceType, size, status: "PENDING" },
+    });
+
+    return {
+      secureUrl,
+      document: {
+        ...existingDocument,
+        publicId,
+        assetId,
+        secureUrl,
+        resourceType,
+        size,
+      },
+    };
+  }
+
+  const document = await prisma.document.create({
+    data: {
+      documentType,
+      publicId: publicId,
+      assetId: assetId,
+      name: file.originalname,
+      resourceType: resourceType,
+      size,
+      restaurant: {
+        connect: { id: restaurantId },
+      },
+    },
+  });
+  
+  return { secureUrl, document };
 };
 
 export const getRestaurantDocumentsService = async ({
@@ -163,76 +154,62 @@ export const getRestaurantDocumentsService = async ({
 }: {
   restaurantId: string;
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-    const documents = await prisma.document.findMany({
-      where: { restaurantId },
-    });
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
+  }
+  
+  const documents = await prisma.document.findMany({
+    where: { restaurantId },
+  });
 
-    if (!documents || documents.length === 0) {
-      throw new AppError("No documents found for this restaurant", 404);
-    }
+  if (!documents || documents.length === 0) {
+    throw new AppError("No documents found for this restaurant", 404);
+  }
 
-    const documentsWithSecureUrls = await Promise.all(
-      documents.map(async (doc) => {
+  const documentsWithSecureUrls = await Promise.all(
+    documents.map(async (doc) => {
+      const secureUrl = await cloudinaryService.getSecureUrl(doc.publicId);
+      return {
+        ...doc,
+        secureUrl,
+      };
+    }),
+  );
+
+  return documentsWithSecureUrls;
+};
+
+export const getRestaurantByIdService = async (restaurantId: string) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    include: {
+      bankDetails: true,
+      documents: true,
+    },
+  });
+
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
+  }
+
+  const restaurantWithSecureUrls = {
+    ...restaurant,
+    documents: await Promise.all(
+      restaurant?.documents?.map(async (doc) => {
         const secureUrl = await cloudinaryService.getSecureUrl(doc.publicId);
         return {
           ...doc,
           secureUrl,
         };
       }),
-    );
+    ),
+  };
 
-    return documentsWithSecureUrls;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError(
-      error instanceof Error
-        ? error.message
-        : "Failed to retrieve restaurant documents",
-      500,
-    );
-  }
-};
-
-export const getRestaurantByIdService = async (restaurantId: string) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-      include: {
-        bankDetails: true,
-        documents: true,
-      },
-    });
-
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-
-    const restaurantWithSecureUrls = {
-      ...restaurant,
-      documents: await Promise.all(
-        restaurant?.documents?.map(async (doc) => {
-          const secureUrl = await cloudinaryService.getSecureUrl(doc.publicId);
-          return {
-            ...doc,
-            secureUrl,
-          };
-        }),
-      ),
-    };
-
-    return restaurantWithSecureUrls;
-  } catch (error) {
-    throw new AppError("Failed to retrieve restaurant details", 500);
-  }
+  return restaurantWithSecureUrls;
 };
 
 export const getAllRestaurantsService = async ({
@@ -248,49 +225,61 @@ export const getAllRestaurantsService = async ({
   city?: string;
   search?: string;
 }) => {
-  try {
-    const skip = offset;
+  const skip = offset;
 
-    const where: Prisma.RestaurantWhereInput = {
-      ...(status && { status }),
-      ...(city && { city: { contains: city, mode: "insensitive" } }),
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { city: { contains: search, mode: "insensitive" } },
-          { fullAddress: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-    };
+  const where: Prisma.RestaurantWhereInput = {
+    ...(status && { status }),
+    ...(city && { city: { contains: city, mode: "insensitive" } }),
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { city: { contains: search, mode: "insensitive" } },
+        { fullAddress: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+  };
 
-    const [restaurants, total] = await Promise.all([
-      prisma.restaurant.findMany({
-        where,
-        skip,
-        take: limit,
-        include: { bankDetails: true, documents: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.restaurant.count({ where }),
-    ]);
+  const [restaurants, total] = await Promise.all([
+    prisma.restaurant.findMany({
+      where,
+      skip,
+      take: limit,
+      include: { bankDetails: true, documents: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.restaurant.count({ where }),
+  ]);
 
-    return { restaurants, total };
-  } catch (error) {
-    throw new AppError("Failed to retrieve restaurants", 500);
-  }
+  return { restaurants, total };
 };
 
 export const getRestaurantsByUserIdService = async (userId: string) => {
-  try {
-    const restaurants = await prisma.restaurant.findMany({
-      where: { ownerId: userId },
-      include: { bankDetails: true, documents: true },
-      orderBy: { createdAt: "desc" },
-    });
-    return restaurants;
-  } catch (error) {
-    throw new AppError("Failed to retrieve restaurants", 500);
-  }
+  const restaurants = await prisma.restaurant.findMany({
+    where: { ownerId: userId },
+    include: {
+      bankDetails: true,
+      documents: true,
+      owner: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return await Promise.all(
+    restaurants.map(async (restaurant) => ({
+      ...restaurant,
+      owner: restaurant.owner.name,
+      documents: await Promise.all(
+        restaurant.documents.map(async (doc) => ({
+          ...doc,
+          secureUrl: await cloudinaryService.getSecureUrl(doc.publicId),
+        })),
+      ),
+    })),
+  );
 };
 
 export const updateRestaurantDetailsService = async ({
@@ -309,26 +298,24 @@ export const updateRestaurantDetailsService = async ({
     longitude?: number | null;
   };
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-    if (restaurant.ownerId !== ownerId) {
-      throw new AppError("Forbidden: you do not own this restaurant", 403);
-    }
-
-    const updated = await prisma.restaurant.update({
-      where: { id: restaurantId },
-      data,
-    });
-    return updated;
-  } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError("Failed to update restaurant details", 500);
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
   }
+  
+  if (restaurant.ownerId !== ownerId) {
+    throw new AppError("Forbidden: you do not own this restaurant", 403);
+  }
+
+  const updated = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data,
+  });
+  
+  return updated;
 };
 
 export const toggleRestaurantOpenService = async ({
@@ -338,32 +325,31 @@ export const toggleRestaurantOpenService = async ({
   restaurantId: string;
   ownerId: string;
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-    if (restaurant.ownerId !== ownerId) {
-      throw new AppError("Forbidden: you do not own this restaurant", 403);
-    }
-    if (restaurant.status !== "APPROVED") {
-      throw new AppError(
-        "Only approved restaurants can be toggled open/closed",
-        400,
-      );
-    }
-
-    const updated = await prisma.restaurant.update({
-      where: { id: restaurantId },
-      data: { isOpen: !restaurant.isOpen },
-    });
-    return updated;
-  } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError("Failed to toggle restaurant open status", 500);
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
   }
+  
+  if (restaurant.ownerId !== ownerId) {
+    throw new AppError("Forbidden: you do not own this restaurant", 403);
+  }
+  
+  if (restaurant.status !== "APPROVED") {
+    throw new AppError(
+      "Only approved restaurants can be toggled open/closed",
+      400,
+    );
+  }
+
+  const updated = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { isOpen: !restaurant.isOpen },
+  });
+  
+  return updated;
 };
 
 export const updateRestaurantStatusService = async ({
@@ -373,25 +359,20 @@ export const updateRestaurantStatusService = async ({
   restaurantId: string;
   status: RESTAURANT_STATUS;
 }) => {
-  try {
-    const restaurant = await prisma.restaurant.findUnique({
-      where: { id: restaurantId },
-    });
-    if (!restaurant) {
-      throw new AppError("Restaurant not found", 404);
-    }
-
-    const updatedRestaurant = await prisma.restaurant.update({
-      where: { id: restaurantId },
-      data: { status },
-    });
-    return updatedRestaurant;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update restaurant status", 500);
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+  });
+  
+  if (!restaurant) {
+    throw new AppError("Restaurant not found", 404);
   }
+
+  const updatedRestaurant = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { status },
+  });
+  
+  return updatedRestaurant;
 };
 
 export const updateRestaurantDocumentStatusService = async ({
@@ -403,23 +384,18 @@ export const updateRestaurantDocumentStatusService = async ({
   status: DOCUMENT_STATUS;
   note?: string;
 }) => {
-  try {
-    const document = await prisma.document.findUnique({
-      where: { id: documentId },
-    });
-    if (!document) {
-      throw new AppError("Document not found", 404);
-    }
-
-    const updatedDocument = await prisma.document.update({
-      where: { id: documentId },
-      data: { status, note: note ?? null },
-    });
-    return updatedDocument;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update restaurant document status", 500);
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+  });
+  
+  if (!document) {
+    throw new AppError("Document not found", 404);
   }
+
+  const updatedDocument = await prisma.document.update({
+    where: { id: documentId },
+    data: { status, note: note ?? null },
+  });
+  
+  return updatedDocument;
 };

@@ -1,4 +1,6 @@
 import jwt, { Secret } from "jsonwebtoken";
+import { env } from "../env.js";
+import { UnauthorizedError } from "../errors/app-error.js";
 import { ROLE } from "../generated/prisma/enums.js";
 
 interface TokenPayload {
@@ -22,7 +24,7 @@ class TokenService {
   private generateAccessToken = async (payload: TokenPayload) => {
     return jwt.sign(
       { ...payload, type: "access" },
-      process.env.ACCESS_TOKEN_SECRET as Secret,
+      env.JWT_ACCESS_SECRET as Secret,
       { expiresIn: "15m" },
     );
   };
@@ -30,23 +32,33 @@ class TokenService {
   private generateRefreshToken = async (payload: TokenPayload) => {
     return jwt.sign(
       { ...payload, type: "refresh" },
-      process.env.REFRESH_TOKEN_SECRET as Secret,
+      env.JWT_REFRESH_SECRET as Secret,
       { expiresIn: "7d" },
     );
   };
 
-  verifyAccessToken = async (token: string): Promise<TokenPayload | null> => {
-    return jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET as Secret,
-    ) as TokenPayload | null;
+  verifyAccessToken = async (token: string): Promise<TokenPayload> => {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_ACCESS_SECRET as Secret,
+      ) as TokenPayload;
+      return decoded;
+    } catch (error) {
+      throw new UnauthorizedError("Invalid or expired access token");
+    }
   };
 
-  verifyRefreshToken = async (token: string): Promise<TokenPayload | null> => {
-    return jwt.verify(
-      token,
-      process.env.REFRESH_TOKEN_SECRET as Secret,
-    ) as TokenPayload | null;
+  verifyRefreshToken = async (token: string): Promise<TokenPayload> => {
+    try {
+      const decoded = jwt.verify(
+        token,
+        env.JWT_REFRESH_SECRET as Secret,
+      ) as TokenPayload;
+      return decoded;
+    } catch (error) {
+      throw new UnauthorizedError("Invalid or expired refresh token");
+    }
   };
 }
 

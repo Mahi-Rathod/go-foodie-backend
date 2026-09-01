@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
+import { NotFoundError } from "../../errors/app-error.js";
 import { UserUpdateInput } from "../../generated/prisma/models.js";
 import { AddressInput } from "../../types/user.types.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
@@ -55,29 +56,20 @@ export const updateUserProfile = async (req: Request, res: Response) => {
 };
 
 export const getUserProfile = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params as { id: string };
-    if (!id) {
-      throw new AppError("User ID is required", 400);
-    }
-    const user = await getUserByIdService(id);
-
-    apiResponseUtils.success({
-      res,
-      message: "User profile fetched successfully",
-      data: user,
-      statusCode: 200,
-    });
-  } catch (error) {
-    apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
+  const { id } = req.params as { id: string };
+  if (!id) {
+    throw new NotFoundError("User id required");
   }
+  const user = await getUserByIdService(id);
+
+  if (!user) throw new NotFoundError("User not found");
+
+  apiResponseUtils.success({
+    res,
+    message: "User profile fetched successfully",
+    data: user,
+    statusCode: 200,
+  });
 };
 
 export const getAllUsers = async (req: Request, res: Response) => {

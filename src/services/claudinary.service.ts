@@ -1,5 +1,6 @@
 import type { UploadApiErrorResponse, UploadApiResponse } from "cloudinary";
 import cloudinary from "../config/claudinary.config.js";
+import { env } from "../env.js";
 
 interface UploadResult {
   publicId: string;
@@ -15,7 +16,7 @@ class CloudinaryService {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
-          folder: process.env.CLOUDINARY_RESTAURANT_FOLDER_NAME!,
+          folder: env.CLOUDINARY_RESTAURANT_FOLDER_NAME,
           resource_type: "raw",
           public_id: fileName,
           access_mode: "public",
@@ -44,17 +45,12 @@ class CloudinaryService {
   }
 
   async getSecureUrl(publicId: string): Promise<string> {
-    try {
-      const signedUrl = cloudinary.url(publicId, {
-        resource_type: "raw",
-        type: "upload",
-        sign_url: true,
-      });
-      return signedUrl;
-    } catch (error) {
-      console.error("Error fetching secure URL from Cloudinary:", error);
-      throw new Error("Failed to fetch secure URL");
-    }
+    const signedUrl = cloudinary.url(publicId, {
+      resource_type: "raw",
+      type: "upload",
+      sign_url: true,
+    });
+    return signedUrl;
   }
 }
 export const cloudinaryService = new CloudinaryService();

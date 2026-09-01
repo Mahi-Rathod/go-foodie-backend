@@ -21,7 +21,8 @@ export const createOrder = async (req: Request, res: Response) => {
 
     const placedOrders = await createOrdersService({
       userId: id,
-      ...validatedData,
+      orders: validatedData.orders,
+      addressId: validatedData.addressId,
     });
 
     return apiResponseUtils.success({

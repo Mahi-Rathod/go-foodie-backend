@@ -26,4 +26,4 @@ router.patch(
   updateOrderStatus,
 );
 
-export default router;
+export const orderRouter = router;

@@ -75,4 +75,4 @@ router.patch(
   updateRestaurantDocumentStatus,
 );
 
-export default router;
+export const restaurantRouter = router;

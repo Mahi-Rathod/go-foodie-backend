@@ -1,6 +1,7 @@
 import z from "zod";
 
 export const createOrderSchema = z.object({
+  userId: z.string(),
   orders: z.array(
     z.object({
       menuItemId: z.string(),
@@ -11,4 +12,5 @@ export const createOrderSchema = z.object({
       restaurantId: z.string(),
     }),
   ),
+  addressId: z.string(),
 });

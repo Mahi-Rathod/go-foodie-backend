@@ -8,6 +8,7 @@ interface PlaceOrderInput {
     quantity: number;
     price: number;
   }[];
+  addressId: string;
 }
 
 export type { PlaceOrderInput };

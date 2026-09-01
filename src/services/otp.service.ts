@@ -2,17 +2,26 @@ import bcrypt from "bcrypt";
 import { OTP_PURPOSE } from "../generated/prisma/enums.js";
 import { prisma } from "../lib/prismaClient.js";
 
+type TransactionClient = Omit<
+  typeof prisma,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>;
+
 class OtpService {
   private OTP_EXPIRY_MINUTES = 10;
 
   async generateOtp({
     identifier,
     purpose,
+    tx,
   }: {
     identifier: string;
     purpose: OTP_PURPOSE;
+    tx?: TransactionClient;
   }): Promise<{ otp: string }> {
-    await prisma.otpCodes.deleteMany({
+    const client = tx ?? prisma;
+
+    await client.otpCodes.deleteMany({
       where: { identifier, purpose },
     });
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -22,7 +31,7 @@ class OtpService {
     const expiresAt = new Date(
       Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
     );
-    await prisma.otpCodes.create({
+    await client.otpCodes.create({
       data: {
         identifier,
         purpose,

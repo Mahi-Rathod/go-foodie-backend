@@ -1,18 +1,23 @@
 import { v4 as uuidv4 } from "uuid";
+import { ConflictError } from "../../errors/app-error.js";
 import { User } from "../../generated/prisma/browser.js";
-import { OTP_PURPOSE, ROLE } from "../../generated/prisma/enums.js";
-import { UserCreateInput } from "../../generated/prisma/models.js";
+import { OTP_PURPOSE } from "../../generated/prisma/enums.js";
 import { prisma } from "../../lib/prismaClient.js";
 import { otpService } from "../../services/otp.service.js";
 import { smsService } from "../../services/sms.service.js";
 import { tokenService } from "../../services/token.service.js";
 import { AppError } from "../../utils/app.error.js";
 import { comparePassword, hashPassword } from "./auth.utils.js";
+import { RegisterUserSchema } from "./schemas.js";
 
-export const registerUserService = async (
-  data: UserCreateInput,
-): Promise<{ user: Omit<User, "password"> }> => {
-  const { username, email, mobile, name, password, role } = data;
+export const registerUserService = async ({
+  username,
+  email,
+  mobile,
+  name,
+  password,
+  role,
+}: RegisterUserSchema): Promise<{ user: Omit<User, "password"> }> => {
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ username }, { email }, { mobile }],
@@ -20,35 +25,35 @@ export const registerUserService = async (
   });
 
   if (existingUser) {
-    throw new AppError(
+    throw new ConflictError(
       "User already exists with this username, email or mobile",
-      409,
     );
   }
 
   const hashedPassword = await hashPassword(password);
 
-  const user = await prisma.user.create({
-    data: {
-      username,
-      name,
-      email,
-      mobile,
-      password: hashedPassword,
-      role: role ?? ROLE.USER,
-    },
+  const { user, otp } = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        username,
+        name,
+        email,
+        mobile,
+        password: hashedPassword,
+        role: role,
+      },
+    });
+
+    const { otp } = await otpService.generateOtp({
+      identifier: mobile,
+      purpose: OTP_PURPOSE.REGISTER,
+      tx,
+    });
+
+    return { user, otp };
   });
 
-  if (!user) {
-    throw new AppError("Failed to create user", 500);
-  }
-
-  const otpCode = await otpService.generateOtp({
-    identifier: mobile,
-    purpose: OTP_PURPOSE.REGISTER,
-  });
-
-  await smsService.sendOTP(mobile, otpCode.otp);
+  await smsService.sendOTP(mobile, otp);
 
   return { user };
 };
@@ -195,12 +200,8 @@ export const loginUserByOtpService = async ({
 export const logoutService = async (refreshToken: string) => {
   const payload = await tokenService.verifyRefreshToken(refreshToken);
 
-  if (!payload) {
-    throw new AppError("Invalid refresh token", 401);
-  }
-
   const session = await prisma.session.findUnique({
-    where: { tokenId: payload?.tokenId as string },
+    where: { tokenId: payload.tokenId },
   });
 
   if (!session) {
@@ -209,13 +210,13 @@ export const logoutService = async (refreshToken: string) => {
 
   if (session.expiresAt < new Date()) {
     await prisma.session.delete({
-      where: { tokenId: payload?.tokenId as string },
+      where: { tokenId: payload.tokenId },
     });
     throw new AppError("Session expired", 401);
   }
 
   await prisma.session.delete({
-    where: { tokenId: payload?.tokenId as string },
+    where: { tokenId: payload.tokenId },
   });
 
   return { message: "Logged out successfully" };
@@ -231,10 +232,6 @@ export const refreshTokenService = async ({
   userAgent: string;
 }) => {
   const payload = await tokenService.verifyRefreshToken(refreshToken);
-
-  if (!payload) {
-    throw new AppError("Invalid refresh token", 401);
-  }
 
   const session = await prisma.session.findUnique({
     where: { tokenId: payload.tokenId },
@@ -289,15 +286,14 @@ export const refreshTokenService = async ({
 };
 
 export const logoutAllService = async (refreshToken: string) => {
-  const paylod = await tokenService.verifyRefreshToken(refreshToken);
-  if (!paylod) {
-    throw new AppError("Invalid refresh token", 401);
-  }
+  const payload = await tokenService.verifyRefreshToken(refreshToken);
+  
   await prisma.session.deleteMany({
     where: {
-      userId: paylod.userId,
+      userId: payload.userId,
     },
   });
+  
   return { message: "Logged out from all devices successfully" };
 };
 

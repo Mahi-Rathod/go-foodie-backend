@@ -41,4 +41,4 @@ router.get("/items/:variantId/", authMiddleware.verifyToken, getVariantById);
 router.patch("/items/:variantId/", authMiddleware.verifyToken, updateVariant);
 router.delete("/items/:variantId/", authMiddleware.verifyToken, deleteVariant);
 
-export default router;
+export const variantRouter = router;

@@ -13,20 +13,14 @@ export const createVariantGroupService = async ({
   name: string;
   isRequired: boolean;
 }): Promise<VariantGroup> => {
-  try {
-    const variantGroup = await prisma.variantGroup.create({
-      data: {
-        name,
-        isRequired,
-      },
-    });
-    return variantGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create variant group", 500);
-  }
+  const variantGroup = await prisma.variantGroup.create({
+    data: {
+      name,
+      isRequired,
+    },
+  });
+  
+  return variantGroup;
 };
 
 export const getAllVariantGroupsService = async ({
@@ -42,31 +36,24 @@ export const getAllVariantGroupsService = async ({
   orderBy: string;
   orderDirection: "asc" | "desc";
 }): Promise<{ variantGroups: VariantGroup[]; total: number }> => {
-  try {
-    const where: Prisma.VariantGroupWhereInput = {
-      ...(search && {
-        name: { contains: search, mode: "insensitive" },
-      }),
-    };
+  const where: Prisma.VariantGroupWhereInput = {
+    ...(search && {
+      name: { contains: search, mode: "insensitive" },
+    }),
+  };
 
-    const [variantGroups, total] = await Promise.all([
-      prisma.variantGroup.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-        include: { variants: true },
-      }),
-      prisma.variantGroup.count({ where }),
-    ]);
+  const [variantGroups, total] = await Promise.all([
+    prisma.variantGroup.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+      include: { variants: true },
+    }),
+    prisma.variantGroup.count({ where }),
+  ]);
 
-    return { variantGroups, total };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get variant groups", 500);
-  }
+  return { variantGroups, total };
 };
 
 export const getVariantGroupByIdService = async ({
@@ -74,21 +61,16 @@ export const getVariantGroupByIdService = async ({
 }: {
   variantGroupId: string;
 }): Promise<VariantGroup & { variants: Variant[] }> => {
-  try {
-    const variantGroup = await prisma.variantGroup.findUnique({
-      where: { id: variantGroupId },
-      include: { variants: true },
-    });
-    if (!variantGroup) {
-      throw new AppError("Variant group not found", 404);
-    }
-    return variantGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get variant group", 500);
+  const variantGroup = await prisma.variantGroup.findUnique({
+    where: { id: variantGroupId },
+    include: { variants: true },
+  });
+  
+  if (!variantGroup) {
+    throw new AppError("Variant group not found", 404);
   }
+  
+  return variantGroup;
 };
 
 export const updateVariantGroupService = async ({
@@ -98,26 +80,21 @@ export const updateVariantGroupService = async ({
   variantGroupId: string;
   data: Prisma.VariantGroupUpdateInput;
 }): Promise<VariantGroup> => {
-  try {
-    const existing = await prisma.variantGroup.findUnique({
-      where: { id: variantGroupId },
-    });
-    if (!existing) {
-      throw new AppError("Variant group not found", 404);
-    }
-
-    const variantGroup = await prisma.variantGroup.update({
-      where: { id: variantGroupId },
-      data,
-      include: { variants: true },
-    });
-    return variantGroup;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update variant group", 500);
+  const existing = await prisma.variantGroup.findUnique({
+    where: { id: variantGroupId },
+  });
+  
+  if (!existing) {
+    throw new AppError("Variant group not found", 404);
   }
+
+  const variantGroup = await prisma.variantGroup.update({
+    where: { id: variantGroupId },
+    data,
+    include: { variants: true },
+  });
+  
+  return variantGroup;
 };
 
 export const deleteVariantGroupService = async ({
@@ -125,27 +102,21 @@ export const deleteVariantGroupService = async ({
 }: {
   variantGroupId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const existing = await prisma.variantGroup.findFirst({
-      where: {
-        id: variantGroupId,
-      },
-    });
-    if (!existing) {
-      throw new AppError("Variant group not found", 404);
-    }
-
-    await prisma.variantGroup.delete({
-      where: { id: variantGroupId },
-    });
-
-    return { message: "Variant group deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete variant group", 500);
+  const existing = await prisma.variantGroup.findFirst({
+    where: {
+      id: variantGroupId,
+    },
+  });
+  
+  if (!existing) {
+    throw new AppError("Variant group not found", 404);
   }
+
+  await prisma.variantGroup.delete({
+    where: { id: variantGroupId },
+  });
+
+  return { message: "Variant group deleted successfully" };
 };
 
 export const createVariantService = async ({
@@ -161,30 +132,25 @@ export const createVariantService = async ({
   isDefault: boolean;
   isAvailable: boolean;
 }): Promise<Variant> => {
-  try {
-    const variantGroup = await prisma.variantGroup.findUnique({
-      where: { id: variantGroupId },
-    });
-    if (!variantGroup) {
-      throw new AppError("Variant group not found", 404);
-    }
-
-    const variant = await prisma.variant.create({
-      data: {
-        name,
-        priceModifier: Number(priceModifier),
-        isDefault,
-        isAvailable,
-        variantGroup: { connect: { id: variantGroupId } },
-      },
-    });
-    return variant;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create variant", 500);
+  const variantGroup = await prisma.variantGroup.findUnique({
+    where: { id: variantGroupId },
+  });
+  
+  if (!variantGroup) {
+    throw new AppError("Variant group not found", 404);
   }
+
+  const variant = await prisma.variant.create({
+    data: {
+      name,
+      priceModifier: Number(priceModifier),
+      isDefault,
+      isAvailable,
+      variantGroup: { connect: { id: variantGroupId } },
+    },
+  });
+  
+  return variant;
 };
 
 export const getVariantsByGroupIdService = async ({
@@ -204,32 +170,25 @@ export const getVariantsByGroupIdService = async ({
   orderDirection: "asc" | "desc";
   isAvailable?: boolean;
 }): Promise<{ variants: Variant[]; total: number }> => {
-  try {
-    const where: Prisma.VariantWhereInput = {
-      ...(variantGroupId && { variantGroupId }),
-      ...(search && {
-        name: { contains: search, mode: "insensitive" },
-      }),
-      ...(isAvailable !== undefined && { isAvailable }),
-    };
+  const where: Prisma.VariantWhereInput = {
+    ...(variantGroupId && { variantGroupId }),
+    ...(search && {
+      name: { contains: search, mode: "insensitive" },
+    }),
+    ...(isAvailable !== undefined && { isAvailable }),
+  };
 
-    const [variants, total] = await Promise.all([
-      prisma.variant.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-      }),
-      prisma.variant.count({ where }),
-    ]);
+  const [variants, total] = await Promise.all([
+    prisma.variant.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+    }),
+    prisma.variant.count({ where }),
+  ]);
 
-    return { variants, total };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get variants", 500);
-  }
+  return { variants, total };
 };
 
 export const getVariantByIdService = async ({
@@ -237,22 +196,17 @@ export const getVariantByIdService = async ({
 }: {
   variantId: string;
 }): Promise<Variant> => {
-  try {
-    const variant = await prisma.variant.findFirst({
-      where: {
-        id: variantId,
-      },
-    });
-    if (!variant) {
-      throw new AppError("Variant not found", 404);
-    }
-    return variant;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get variant", 500);
+  const variant = await prisma.variant.findFirst({
+    where: {
+      id: variantId,
+    },
+  });
+  
+  if (!variant) {
+    throw new AppError("Variant not found", 404);
   }
+  
+  return variant;
 };
 
 export const updateVariantService = async ({
@@ -262,21 +216,16 @@ export const updateVariantService = async ({
   variantId: string;
   data: Prisma.VariantUpdateInput;
 }): Promise<Variant> => {
-  try {
-    const variant = await prisma.variant.update({
-      where: { id: variantId },
-      data,
-    });
-    if (!variant) {
-      throw new AppError("Variant not found", 404);
-    }
-    return variant;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update variant", 500);
+  const variant = await prisma.variant.update({
+    where: { id: variantId },
+    data,
+  });
+  
+  if (!variant) {
+    throw new AppError("Variant not found", 404);
   }
+  
+  return variant;
 };
 
 export const deleteVariantService = async ({
@@ -284,24 +233,19 @@ export const deleteVariantService = async ({
 }: {
   variantId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const existing = await prisma.variant.findFirst({
-      where: {
-        id: variantId,
-      },
-    });
-    if (!existing) {
-      throw new AppError("Variant not found", 404);
-    }
-
-    await prisma.variant.delete({
-      where: { id: variantId },
-    });
-    return { message: "Variant deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete variant", 500);
+  const existing = await prisma.variant.findFirst({
+    where: {
+      id: variantId,
+    },
+  });
+  
+  if (!existing) {
+    throw new AppError("Variant not found", 404);
   }
+
+  await prisma.variant.delete({
+    where: { id: variantId },
+  });
+  
+  return { message: "Variant deleted successfully" };
 };

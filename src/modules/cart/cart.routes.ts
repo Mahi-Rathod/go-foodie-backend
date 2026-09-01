@@ -15,4 +15,4 @@ router.put("/:cartItemId/", authMiddleware.verifyToken, updateCartItem);
 router.delete("/:cartItemId", authMiddleware.verifyToken, removeFromCart);
 // router.delete("/", authMiddleware.verifyToken, clearCart);
 
-export default router;
+export const cartRouter = router;

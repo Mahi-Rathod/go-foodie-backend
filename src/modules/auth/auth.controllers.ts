@@ -1,6 +1,5 @@
-import { Request, Response } from "express";
-import { z } from "zod";
-import { OTP_PURPOSE, ROLE } from "../../generated/prisma/enums.js";
+import { Request, RequestHandler, Response } from "express";
+import { OTP_PURPOSE } from "../../generated/prisma/enums.js";
 import { otpService } from "../../services/otp.service.js";
 import { smsService } from "../../services/sms.service.js";
 import { apiResponseUtils } from "../../utils/apiResponse.utils.js";
@@ -17,307 +16,129 @@ import {
   sendForgotPasswordOtpService,
   verifyUserService,
 } from "./auth.services.js";
-import {
-  UserLoginSchema,
-  UserRegisterSchema,
-  UserVerifySchema,
-} from "./schemas.js";
 
-export const registerUser = async (req: Request, res: Response) => {
-  try {
-    const validatedData = UserRegisterSchema.parse(req.body);
+export const registerUser: RequestHandler = async (req, res) => {
+  const { username, name, email, mobile, password, role } = req.body;
 
-    const { user } = await registerUserService({
-      username: validatedData.username,
-      name: validatedData.name,
-      email: validatedData.email,
-      mobile: validatedData.mobile,
-      password: validatedData.password,
-      role: validatedData.role as ROLE,
-    });
+  const { user } = await registerUserService({
+    username,
+    name,
+    email,
+    mobile,
+    password,
+    role,
+  });
 
-    return apiResponseUtils.success({
-      res,
-      message: "User registered successfully",
-      data: user,
-      statusCode: 201,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiResponseUtils.error({
-        res,
-        message: "Validation error",
-        statusCode: 400,
-        error: error.message,
-      });
-    }
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  return apiResponseUtils.success({
+    res,
+    message: "User registered successfully",
+    data: user,
+    statusCode: 201,
+  });
 };
 
-export const verifyUser = async (req: Request, res: Response) => {
-  try {
-    const validatedData = UserVerifySchema.parse(req.body);
+export const verifyUser: RequestHandler = async (req, res) => {
+  const { otp, identifier, purpose } = req.body;
 
-    const { user } = await verifyUserService({
-      otp: validatedData.otp,
-      identifier: validatedData.mobile,
-      purpose: OTP_PURPOSE.REGISTER,
-    });
+  const { user } = await verifyUserService({ otp, identifier, purpose });
 
-    return apiResponseUtils.success({
-      res,
-      message: "User verified successfully",
-      data: user,
-      statusCode: 200,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiResponseUtils.error({
-        res,
-        message: "Validation error",
-        statusCode: 400,
-        error: error.message,
-      });
-    }
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  return apiResponseUtils.success({
+    res,
+    message: "User verified successfully",
+    data: user,
+    statusCode: 200,
+  });
 };
 
-export const loginUserByPassword = async (req: Request, res: Response) => {
-  try {
-    const ip =
-      req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
-      req.socket.remoteAddress ||
-      "";
-    const userAgent = req.headers["user-agent"] || "";
-    const validatedData = UserLoginSchema.parse({
-      ...req.body,
-      ip,
-      userAgent,
-    });
-    if (!validatedData.mobile || !validatedData.password) {
-      return apiResponseUtils.error({
-        res,
-        message: "Email and password are required",
-        statusCode: 400,
-        error: "Email and password are required",
-      });
-    }
+export const loginUserByPassword: RequestHandler = async (req, res) => {
+  const ip =
+    req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
+    req.socket.remoteAddress ||
+    "";
 
-    const { user, accessToken, refreshToken } =
-      await loginUserByPasswordService({
-        identifier: validatedData.mobile || validatedData.email || "",
-        password: validatedData.password,
-        ip,
-        userAgent,
-      });
+  const userAgent = req.headers["user-agent"] || "";
 
-    return apiResponseUtils.success({
-      res,
-      message: "User logged in successfully",
-      data: { user, accessToken, refreshToken },
-      statusCode: 200,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiResponseUtils.error({
-        res,
-        message: "Validation error",
-        statusCode: 400,
-        error: error.message,
-      });
-    }
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  const { email, password, mobile } = req.body;
+
+  const { user, accessToken, refreshToken } = await loginUserByPasswordService({
+    identifier: mobile ?? email ?? "",
+    password,
+    ip,
+    userAgent,
+  });
+
+  return apiResponseUtils.success({
+    res,
+    message: "User logged in successfully",
+    data: { user, accessToken, refreshToken },
+    statusCode: 200,
+  });
 };
 
-export const loginUserByOtp = async (req: Request, res: Response) => {
-  try {
-    const { mobile, otp } = req.body;
+export const loginUserByOtp: RequestHandler = async (req, res) => {
+  const { mobile, otp } = req.body;
 
-    const ip =
-      req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
-      req.socket.remoteAddress ||
-      "";
+  const ip =
+    req.headers["x-forwarded-for"]?.toString().split(",")[0] ||
+    req.socket.remoteAddress ||
+    "";
 
-    const userAgent = req.headers["user-agent"] || "";
+  const userAgent = req.headers["user-agent"] || "";
 
-    const validatedData = UserLoginSchema.parse({
-      mobile,
-      otp,
-      userAgent,
-      ip,
-    });
+  const { user, accessToken, refreshToken } = await loginUserByOtpService({
+    mobile,
+    otp,
+    ip,
+    userAgent,
+  });
 
-    if (!validatedData.mobile || !validatedData.otp) {
-      return apiResponseUtils.error({
-        res,
-        message: "Mobile and OTP are required",
-        statusCode: 400,
-        error: "Mobile and OTP are required",
-      });
-    }
-
-    const { user, accessToken, refreshToken } = await loginUserByOtpService({
-      mobile: validatedData.mobile,
-      otp: validatedData.otp,
-      ip: validatedData.ip,
-      userAgent: validatedData.userAgent,
-    });
-
-    return apiResponseUtils.success({
-      res,
-      message: "User logged in successfully",
-      data: { user, accessToken, refreshToken },
-      statusCode: 200,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiResponseUtils.error({
-        res,
-        message: "Validation error",
-        statusCode: 400,
-        error: error.message,
-      });
-    }
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  return apiResponseUtils.success({
+    res,
+    message: "User logged in successfully",
+    data: { user, accessToken, refreshToken },
+    statusCode: 200,
+  });
 };
 
-export const sendLoginOtp = async (req: Request, res: Response) => {
-  try {
-    const { mobile } = req.body;
-    if (!mobile) {
-      return apiResponseUtils.error({
-        res,
-        message: "Mobile is required",
-        statusCode: 400,
-        error: "Mobile is required",
-      });
-    }
+export const sendLoginOtp: RequestHandler = async (req, res) => {
+  const { mobile } = req.body;
 
-    const { otp } = await otpService.generateOtp({
-      identifier: mobile,
-      purpose: OTP_PURPOSE.LOGIN,
-    });
+  const { otp } = await otpService.generateOtp({
+    identifier: mobile,
+    purpose: OTP_PURPOSE.LOGIN,
+  });
 
-    await smsService.sendOTP(mobile, otp);
+  await smsService.sendOTP(mobile, otp);
 
-    return apiResponseUtils.success({
-      res,
-      message: "OTP sent successfully",
-      data: { mobile },
-      statusCode: 200,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return apiResponseUtils.error({
-        res,
-        message: "Validation error",
-        statusCode: 400,
-        error: error.message,
-      });
-    }
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  return apiResponseUtils.success({
+    res,
+    message: "OTP sent successfully",
+    data: { mobile },
+    statusCode: 200,
+  });
 };
 
-export const logout = async (req: Request, res: Response) => {
+export const logout: RequestHandler = async (req, res) => {
   const { refreshToken } = req.body;
-  if (!refreshToken) {
-    return apiResponseUtils.error({
-      res,
-      message: "Refresh token is required",
-      statusCode: 400,
-      error: "Refresh token is required",
-    });
-  }
 
-  try {
-    const result = await logoutService(refreshToken);
-    return apiResponseUtils.success({
-      res,
-      message: result.message,
-      statusCode: 200,
-    });
-  } catch (error) {
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  const result = await logoutService(refreshToken);
+  return apiResponseUtils.success({
+    res,
+    message: result.message,
+    statusCode: 200,
+  });
 };
 
-export const logoutAll = async (req: Request, res: Response) => {
-  try {
-    const { refreshToken } = req.body;
+export const logoutAll: RequestHandler = async (req, res) => {
+  const { refreshToken } = req.body;
 
-    if (!refreshToken) {
-      return apiResponseUtils.error({
-        res,
-        message: "Refresh token is required",
-        statusCode: 400,
-        error: "Refresh token is required",
-      });
-    }
+  const result = await logoutAllService(refreshToken);
 
-    const result = await logoutAllService(refreshToken);
-
-    return apiResponseUtils.success({
-      res,
-      message: result.message,
-      statusCode: 200,
-    });
-  } catch (error) {
-    return apiResponseUtils.error({
-      res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
-    });
-  }
+  return apiResponseUtils.success({
+    res,
+    message: result.message,
+    statusCode: 200,
+  });
 };
 
 export const refreshToken = async (req: Request, res: Response) => {
@@ -359,42 +180,26 @@ export const refreshToken = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.user;
-    if (!id) {
-      return apiResponseUtils.error({
-        res,
-        message: "User not found",
-        statusCode: 404,
-        error: "User not found",
-      });
-    }
-    const user = await getUserByIdService(id);
-    if (!user) {
-      return apiResponseUtils.error({
-        res,
-        message: "User not found",
-        statusCode: 404,
-        error: "User not found",
-      });
-    }
-    return apiResponseUtils.success({
-      res,
-      message: "User fetched successfully",
-      data: user,
-      statusCode: 200,
-    });
-  } catch (error) {
+export const getProfile: RequestHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const { id } = req.user;
+  const user = await getUserByIdService(id);
+  if (!user) {
     return apiResponseUtils.error({
       res,
-      message:
-        error instanceof AppError ? error.message : "Internal server error",
-      statusCode: error instanceof AppError ? error.statusCode : 500,
-      error:
-        error instanceof AppError ? error.message : "Internal server error",
+      message: "User not found",
+      statusCode: 404,
+      error: "User not found",
     });
   }
+  return apiResponseUtils.success({
+    res,
+    message: "User fetched successfully",
+    data: user,
+    statusCode: 200,
+  });
 };
 
 export const sendForgotPasswordOtp = async (req: Request, res: Response) => {

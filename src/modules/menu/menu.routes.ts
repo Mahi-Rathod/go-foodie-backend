@@ -74,4 +74,4 @@ router.put(
 //   deleteVariantGroup,
 // );
 
-export default router;
+export const menuRouter = router;

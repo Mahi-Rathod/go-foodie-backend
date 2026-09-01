@@ -25,4 +25,4 @@ router.patch("/addresses/:id", authMiddleware.verifyToken, updateUserAddress);
 router.delete("/addresses/all", authMiddleware.verifyToken, deleteAllAddresses);
 router.delete("/addresses/:id", authMiddleware.verifyToken, deleteUserAddress);
 
-export default router;
+export const userRouter = router;

@@ -1,4 +1,5 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, RequestHandler, Response } from "express";
+import { UnauthorizedError } from "../errors/app-error.js";
 import { ROLE, User } from "../generated/prisma/client.js";
 import { tokenService } from "../services/token.service.js";
 import { apiResponseUtils } from "../utils/apiResponse.utils.js";
@@ -111,6 +112,27 @@ class AuthMiddleware {
       });
     }
   }
+
+  requireAuth: RequestHandler = async (req, _res, next) => {
+    const token =
+      req.cookies.token || req.header("Authorization")?.replace("Bearer ", "");
+
+    if (!token) {
+      throw new UnauthorizedError("Missing or Invalid Authorization Token");
+    }
+
+    const payload = await tokenService.verifyAccessToken(token);
+
+    req.user = {
+      id: payload.userId,
+      username: payload.username,
+      email: payload.email,
+      mobile: payload.mobile,
+      role: payload.role,
+    };
+
+    next();
+  };
 }
 
 export const authMiddleware = new AuthMiddleware();

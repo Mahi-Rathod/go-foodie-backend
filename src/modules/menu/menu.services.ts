@@ -25,34 +25,29 @@ export const createMenuCategoryService = async ({
   isActive: boolean;
   imageId: string;
 }): Promise<MenuCategory> => {
-  try {
-    const menuCategory = await prisma.menuCategory.create({
-      data: {
-        name,
-        description,
-        sortOrder,
-        isActive,
-        restaurant: {
-          connect: { id: restaurantId },
-        },
-        image: {
-          connect: { id: imageId },
-        },
+  const menuCategory = await prisma.menuCategory.create({
+    data: {
+      name,
+      description,
+      sortOrder,
+      isActive,
+      restaurant: {
+        connect: { id: restaurantId },
       },
-      include: {
-        image: true,
+      image: {
+        connect: { id: imageId },
       },
-    });
-    if (!menuCategory) {
-      throw new AppError("Failed to create menu category", 400);
-    }
-    return menuCategory;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create menu category", 500);
+    },
+    include: {
+      image: true,
+    },
+  });
+
+  if (!menuCategory) {
+    throw new AppError("Failed to create menu category", 400);
   }
+
+  return menuCategory;
 };
 
 export const getMenuCategoriesByRestaurantIdService = async ({
@@ -71,57 +66,50 @@ export const getMenuCategoriesByRestaurantIdService = async ({
   search: string;
   orderBy: string;
   orderDirection: "asc" | "desc";
-  isActive: boolean;
-  sortOrder: number;
+  isActive: boolean | undefined;
+  sortOrder: number | undefined;
 }): Promise<{
   menuCategories: MenuCategoryWithImage[];
   total: number;
 }> => {
-  try {
-    const where: Prisma.MenuCategoryWhereInput = {
-      restaurantId,
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { description: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-      ...(isActive !== undefined && { isActive }),
-      ...(sortOrder !== undefined && { sortOrder }),
-    };
+  const where: Prisma.MenuCategoryWhereInput = {
+    restaurantId,
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+    ...(isActive !== undefined && { isActive }),
+    ...(sortOrder !== undefined && { sortOrder }),
+  };
 
-    const [menuCategories, total] = await Promise.all([
-      prisma.menuCategory.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-        include: {
-          image: true,
-        },
-      }),
-      prisma.menuCategory.count({ where }),
-    ]);
+  const [menuCategories, total] = await Promise.all([
+    prisma.menuCategory.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+      include: {
+        image: true,
+      },
+    }),
+    prisma.menuCategory.count({ where }),
+  ]);
 
-    const menuCategoriesWithImage = await Promise.all(
-      menuCategories.map(async (menuCategory) => ({
-        ...menuCategory,
-        image: await cloudinaryService.getSecureUrl(
-          menuCategory.image?.publicId!,
-        ),
-      })),
-    );
+  const menuCategoriesWithImage = await Promise.all(
+    menuCategories.map(async (menuCategory) => ({
+      ...menuCategory,
+      image: await cloudinaryService.getSecureUrl(
+        menuCategory.image?.publicId!,
+      ),
+    })),
+  );
 
-    return {
-      menuCategories: menuCategoriesWithImage,
-      total,
-    };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get menu categories", 500);
-  }
+  return {
+    menuCategories: menuCategoriesWithImage,
+    total,
+  };
 };
 
 export const getMenuCategoryByIdService = async ({
@@ -129,25 +117,20 @@ export const getMenuCategoryByIdService = async ({
 }: {
   menuCategoryId: string;
 }): Promise<MenuCategoryWithImage> => {
-  try {
-    const menuCategory = await prisma.menuCategory.findUnique({
-      where: { id: menuCategoryId },
-      include: { image: true },
-    });
-    if (!menuCategory) {
-      throw new AppError("Menu category not found", 404);
-    }
-    const image = await cloudinaryService.getSecureUrl(
-      menuCategory.image?.publicId!,
-    );
+  const menuCategory = await prisma.menuCategory.findUnique({
+    where: { id: menuCategoryId },
+    include: { image: true },
+  });
 
-    return { ...menuCategory, image };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get menu category", 500);
+  if (!menuCategory) {
+    throw new AppError("Menu category not found", 404);
   }
+
+  const image = await cloudinaryService.getSecureUrl(
+    menuCategory.image?.publicId!,
+  );
+
+  return { ...menuCategory, image };
 };
 
 export const deleteMenuCategoryService = async ({
@@ -155,20 +138,15 @@ export const deleteMenuCategoryService = async ({
 }: {
   menuCategoryId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const menuCategory = await prisma.menuCategory.delete({
-      where: { id: menuCategoryId },
-    });
-    if (!menuCategory) {
-      throw new AppError("Menu category not found", 404);
-    }
-    return { message: "Menu category deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete menu category", 500);
+  const menuCategory = await prisma.menuCategory.delete({
+    where: { id: menuCategoryId },
+  });
+
+  if (!menuCategory) {
+    throw new AppError("Menu category not found", 404);
   }
+
+  return { message: "Menu category deleted successfully" };
 };
 
 export const createMenuItemService = async ({
@@ -200,41 +178,37 @@ export const createMenuItemService = async ({
   image: string;
   sortOrder: number;
 }): Promise<MenuItem> => {
-  try {
-    const category = await prisma.menuCategory.findFirst({
-      where: { id: categoryId, restaurantId },
-    });
-    if (!category) {
-      throw new AppError("Menu category not found for this restaurant", 404);
-    }
+  const category = await prisma.menuCategory.findFirst({
+    where: { id: categoryId, restaurantId },
+  });
 
-    const menuItem = await prisma.menuItem.create({
-      data: {
-        name,
-        description: description ?? null,
-        price,
-        isVeg,
-        isAvailable,
-        prepTimeMins,
-        ...(calories !== undefined && { calories }),
-        allergens,
-        tags,
-        image,
-        sortOrder,
-        restaurant: { connect: { id: restaurantId } },
-        category: { connect: { id: categoryId } },
-      },
-    });
-    if (!menuItem) {
-      throw new AppError("Failed to create menu item", 400);
-    }
-    return menuItem;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to create menu item", 500);
+  if (!category) {
+    throw new AppError("Menu category not found for this restaurant", 404);
   }
+
+  const menuItem = await prisma.menuItem.create({
+    data: {
+      name,
+      description: description ?? null,
+      price,
+      isVeg,
+      isAvailable,
+      prepTimeMins,
+      ...(calories !== undefined && { calories }),
+      allergens,
+      tags,
+      image,
+      sortOrder,
+      restaurant: { connect: { id: restaurantId } },
+      category: { connect: { id: categoryId } },
+    },
+  });
+
+  if (!menuItem) {
+    throw new AppError("Failed to create menu item", 400);
+  }
+
+  return menuItem;
 };
 
 export const getMenuItemsByRestaurantIdService = async ({
@@ -258,38 +232,31 @@ export const getMenuItemsByRestaurantIdService = async ({
   isVeg?: boolean;
   isAvailable?: boolean;
 }): Promise<{ menuItems: MenuItem[]; total: number }> => {
-  try {
-    const where: Prisma.MenuItemWhereInput = {
-      ...(restaurantId && { restaurantId }),
-      ...(categoryId && { categoryId }),
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { description: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-      ...(isVeg !== undefined && { isVeg }),
-      ...(isAvailable !== undefined && { isAvailable }),
-    };
+  const where: Prisma.MenuItemWhereInput = {
+    ...(restaurantId && { restaurantId }),
+    ...(categoryId && { categoryId }),
+    ...(search && {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ],
+    }),
+    ...(isVeg !== undefined && { isVeg }),
+    ...(isAvailable !== undefined && { isAvailable }),
+  };
 
-    const [menuItems, total] = await Promise.all([
-      prisma.menuItem.findMany({
-        where,
-        skip: offset,
-        take: limit,
-        orderBy: { [orderBy]: orderDirection },
-        include: { category: true },
-      }),
-      prisma.menuItem.count({ where }),
-    ]);
+  const [menuItems, total] = await Promise.all([
+    prisma.menuItem.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      orderBy: { [orderBy]: orderDirection },
+      include: { category: true },
+    }),
+    prisma.menuItem.count({ where }),
+  ]);
 
-    return { menuItems, total };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get menu items", 500);
-  }
+  return { menuItems, total };
 };
 
 export const getMenuItemByIdService = async ({
@@ -297,21 +264,16 @@ export const getMenuItemByIdService = async ({
 }: {
   menuItemId: string;
 }): Promise<MenuItem> => {
-  try {
-    const menuItem = await prisma.menuItem.findUnique({
-      where: { id: menuItemId },
-      include: { category: true },
-    });
-    if (!menuItem) {
-      throw new AppError("Menu item not found", 404);
-    }
-    return menuItem;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to get menu item", 500);
+  const menuItem = await prisma.menuItem.findUnique({
+    where: { id: menuItemId },
+    include: { category: true },
+  });
+
+  if (!menuItem) {
+    throw new AppError("Menu item not found", 404);
   }
+
+  return menuItem;
 };
 
 export const deleteMenuItemService = async ({
@@ -319,20 +281,15 @@ export const deleteMenuItemService = async ({
 }: {
   menuItemId: string;
 }): Promise<{ message: string }> => {
-  try {
-    const menuItem = await prisma.menuItem.delete({
-      where: { id: menuItemId },
-    });
-    if (!menuItem) {
-      throw new AppError("Menu item not found", 404);
-    }
-    return { message: "Menu item deleted successfully" };
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to delete menu item", 500);
+  const menuItem = await prisma.menuItem.delete({
+    where: { id: menuItemId },
+  });
+
+  if (!menuItem) {
+    throw new AppError("Menu item not found", 404);
   }
+
+  return { message: "Menu item deleted successfully" };
 };
 
 export const updateMenuItemService = async ({
@@ -344,22 +301,17 @@ export const updateMenuItemService = async ({
   data: Prisma.MenuItemUpdateInput;
   imageId?: string;
 }): Promise<MenuItem> => {
-  try {
-    const menuItem = await prisma.menuItem.update({
-      where: { id: menuItemId },
-      data: {
-        ...data,
-        ...(imageId && { imageId }),
-      },
-    });
-    if (!menuItem) {
-      throw new AppError("Menu item not found", 404);
-    }
-    return menuItem;
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    throw new AppError("Failed to update menu item", 500);
+  const menuItem = await prisma.menuItem.update({
+    where: { id: menuItemId },
+    data: {
+      ...data,
+      ...(imageId && { imageId }),
+    },
+  });
+
+  if (!menuItem) {
+    throw new AppError("Menu item not found", 404);
   }
+
+  return menuItem;
 };

@@ -41,4 +41,4 @@ router.get("/items/:addonId/", authMiddleware.verifyToken, getAddonById);
 router.patch("/items/:addonId/", authMiddleware.verifyToken, updateAddon);
 router.delete("/items/:addonId/", authMiddleware.verifyToken, deleteAddon);
 
-export default router;
+export const addonRouter = router;

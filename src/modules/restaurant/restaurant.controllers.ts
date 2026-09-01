@@ -252,10 +252,13 @@ export const getMyRestaurants = async (req: Request, res: Response) => {
     const { id } = req.user;
     const restaurants = await getRestaurantsByUserIdService(id);
 
-    return apiResponseUtils.success({
+    return apiResponseUtils.paginated({
       res,
       message: "Your restaurants retrieved successfully",
-      data: restaurants,
+      results: restaurants,
+      total: restaurants.length,
+      offset: 0,
+      limit: 10,
       statusCode: 200,
     });
   } catch (error) {

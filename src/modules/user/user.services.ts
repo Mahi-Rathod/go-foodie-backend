@@ -7,21 +7,18 @@ import { AppError } from "../../utils/app.error.js";
 export const getUserByIdService = async (
   id: string,
 ): Promise<Omit<User, "password"> | null> => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      omit: {
-        password: true,
-      },
-      include: {
-        addresses: true,
-        restaurants: true,
-      },
-    });
-    return user;
-  } catch (error) {
-    throw new AppError("Failed to get user", 400);
-  }
+  const user = await prisma.user.findUnique({
+    where: { id },
+    omit: {
+      password: true,
+    },
+    include: {
+      addresses: true,
+      restaurants: true,
+    },
+  });
+  
+  return user;
 };
 
 export const getAllUsersService = async ({
@@ -38,30 +35,27 @@ export const getAllUsersService = async ({
   offset: number;
   limit: number;
 }> => {
-  try {
-    const users = await prisma.user.findMany({
-      omit: {
-        password: true,
-      },
-      skip: offset,
-      take: limit,
-      where: {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { mobile: { contains: search } },
-        ],
-      },
-    });
-    return {
-      results: users,
-      total: users.length,
-      offset,
-      limit,
-    };
-  } catch (error) {
-    throw new AppError("Failed to get users", 400);
-  }
+  const users = await prisma.user.findMany({
+    omit: {
+      password: true,
+    },
+    skip: offset,
+    take: limit,
+    where: {
+      OR: [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { mobile: { contains: search } },
+      ],
+    },
+  });
+  
+  return {
+    results: users,
+    total: users.length,
+    offset,
+    limit,
+  };
 };
 
 export const updateUserProfileService = async ({
@@ -71,18 +65,15 @@ export const updateUserProfileService = async ({
   id: string;
   updatedUserData: UserUpdateInput;
 }): Promise<Omit<User, "password"> | null> => {
-  try {
-    const user = await prisma.user.update({
-      where: { id },
-      data: updatedUserData,
-      omit: {
-        password: true,
-      },
-    });
-    return user;
-  } catch (error) {
-    throw new AppError("Failed to update user profile", 400);
-  }
+  const user = await prisma.user.update({
+    where: { id },
+    data: updatedUserData,
+    omit: {
+      password: true,
+    },
+  });
+  
+  return user;
 };
 
 export const deleteUserProfileService = async ({
@@ -90,15 +81,11 @@ export const deleteUserProfileService = async ({
 }: {
   id: string;
 }): Promise<{ message: string } | null> => {
-  try {
-    await prisma.user.delete({
-      where: { id },
-    });
+  await prisma.user.delete({
+    where: { id },
+  });
 
-    return { message: "User profile deleted successfully" };
-  } catch (error) {
-    throw new AppError("Failed to delete user profile", 400);
-  }
+  return { message: "User profile deleted successfully" };
 };
 
 export const addUserAddressService = async ({
@@ -113,30 +100,24 @@ export const addUserAddressService = async ({
   latitude,
   longitude,
 }: AddressInput): Promise<Address | null> => {
-  try {
-    const address = await prisma.address.create({
-      data: {
-        label,
-        fullAddress,
-        landmark: landmark ?? null,
-        city,
-        state,
-        pinCode,
-        country,
-        latitude: latitude ?? null,
-        longitude: longitude ?? null,
-        user: {
-          connect: { id: userId },
-        },
+  const address = await prisma.address.create({
+    data: {
+      label,
+      fullAddress,
+      landmark: landmark ?? null,
+      city,
+      state,
+      pinCode,
+      country,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      user: {
+        connect: { id: userId },
       },
-    });
-    return address;
-  } catch (error) {
-    throw new AppError(
-      error instanceof Error ? error.message : "Failed to add user address",
-      400,
-    );
-  }
+    },
+  });
+  
+  return address;
 };
 
 export const updateUserAddressService = async ({
@@ -146,15 +127,12 @@ export const updateUserAddressService = async ({
   id: string;
   newAddress: Partial<AddressInput>;
 }): Promise<Address | null> => {
-  try {
-    const address = await prisma.address.update({
-      where: { id: id as string },
-      data: newAddress,
-    });
-    return address;
-  } catch (error) {
-    throw new AppError("Failed to update user address", 400);
-  }
+  const address = await prisma.address.update({
+    where: { id: id as string },
+    data: newAddress,
+  });
+  
+  return address;
 };
 
 export const deleteUserAddressService = async ({
@@ -162,14 +140,11 @@ export const deleteUserAddressService = async ({
 }: {
   id: string;
 }): Promise<{ message: string } | null> => {
-  try {
-    await prisma.address.delete({
-      where: { id: id as string },
-    });
-    return { message: "Address deleted successfully" };
-  } catch (error) {
-    throw new AppError("Failed to delete user address", 400);
-  }
+  await prisma.address.delete({
+    where: { id: id as string },
+  });
+  
+  return { message: "Address deleted successfully" };
 };
 
 export const deleteAllAddressesService = async ({
@@ -177,16 +152,9 @@ export const deleteAllAddressesService = async ({
 }: {
   userId: string;
 }): Promise<{ message: string } | null> => {
-  try {
-    await prisma.address.deleteMany({
-      where: { userId },
-    });
-    return { message: "All addresses deleted successfully" };
-  } catch (error) {
-    console.log(error);
-    throw new AppError(
-      error instanceof Error ? error.message : "Failed to delete all addresses",
-      400,
-    );
-  }
+  await prisma.address.deleteMany({
+    where: { userId },
+  });
+  
+  return { message: "All addresses deleted successfully" };
 };
